@@ -152,7 +152,7 @@ export interface NotificationRecord {
   message: string;
   related_entity_id?: string | null;
   related_entity_type?: string | null;
-  is_read: number;
+  is_read: boolean;
   created_at: string;
 }
 
@@ -222,7 +222,7 @@ export function comparePassword(plainText: string, hash: string): boolean {
   return bcrypt.compareSync(plainText, hash);
 }
 
-export function createUser(data: {
+export async function createUser(data: {
   role: 'farmer' | 'buyer';
   name: string;
   organization_name?: string;
@@ -236,11 +236,11 @@ export function createUser(data: {
   village?: string;
   business_type?: string;
   location?: string;
-}): UserRecord {
+}) {
   const userId = `usr_${crypto.randomUUID().slice(0, 12)}`;
   const passwordHash = hashPassword(data.password);
 
-  execute(
+  await execute(
     `INSERT INTO users (id, role, name, organization_name, mobile, email, password_hash, state, district, preferred_language)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
@@ -260,7 +260,7 @@ export function createUser(data: {
   // Create role-specific profile
   if (data.role === 'farmer') {
     const profId = `prof_${crypto.randomUUID().slice(0, 12)}`;
-    execute(
+    await execute(
       `INSERT INTO farmer_profiles (id, user_id, farm_location, village, state, district)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -274,7 +274,7 @@ export function createUser(data: {
     );
   } else if (data.role === 'buyer') {
     const profId = `prof_${crypto.randomUUID().slice(0, 12)}`;
-    execute(
+    await execute(
       `INSERT INTO buyer_profiles (id, user_id, organization_name, business_type, location, state, district)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -289,29 +289,29 @@ export function createUser(data: {
     );
   }
 
-  const user = findUserById(userId);
+  const user = await findUserById(userId);
   if (!user) throw new Error('User creation failed');
   return user;
 }
 
-export function findUserByCredentials(identifier: string): UserRecord | null {
+export async function findUserByCredentials(identifier: string) {
   const cleanId = identifier.trim().toLowerCase();
-  return queryOne<UserRecord>(
+  return await queryOne<UserRecord>(
     `SELECT * FROM users WHERE LOWER(email) = ? OR mobile = ? LIMIT 1`,
     [cleanId, identifier.trim()]
   );
 }
 
-export function findUserById(id: string): UserRecord | null {
-  return queryOne<UserRecord>(
+export async function findUserById(id: string) {
+  return await queryOne<UserRecord>(
     `SELECT id, role, name, organization_name, mobile, email, state, district, preferred_language, created_at, updated_at
      FROM users WHERE id = ? LIMIT 1`,
     [id]
   );
 }
 
-export function updateUser(id: string, updates: Partial<UserRecord>): UserRecord | null {
-  const currentUser = findUserById(id);
+export async function updateUser(id: string, updates: Partial<UserRecord>) {
+  const currentUser = await findUserById(id);
   if (!currentUser) return null;
 
   const name = updates.name !== undefined ? updates.name : currentUser.name;
@@ -322,38 +322,38 @@ export function updateUser(id: string, updates: Partial<UserRecord>): UserRecord
   const district = updates.district !== undefined ? updates.district : currentUser.district;
   const preferred_language = updates.preferred_language !== undefined ? updates.preferred_language : currentUser.preferred_language;
 
-  execute(
+  await execute(
     `UPDATE users 
-     SET name = ?, organization_name = ?, mobile = ?, email = ?, state = ?, district = ?, preferred_language = ?, updated_at = datetime('now')
+     SET name = ?, organization_name = ?, mobile = ?, email = ?, state = ?, district = ?, preferred_language = ?, updated_at = now()
      WHERE id = ?`,
     [name, organization_name, mobile, email, state, district, preferred_language, id]
   );
 
-  return findUserById(id);
+  return await findUserById(id);
 }
 
-export function getFarmerProfile(userId: string): FarmerProfileRecord | null {
-  return queryOne<FarmerProfileRecord>(
+export async function getFarmerProfile(userId: string) {
+  return await queryOne<FarmerProfileRecord>(
     `SELECT * FROM farmer_profiles WHERE user_id = ? LIMIT 1`,
     [userId]
   );
 }
 
-export function getBuyerProfile(userId: string): BuyerProfileRecord | null {
-  return queryOne<BuyerProfileRecord>(
+export async function getBuyerProfile(userId: string) {
+  return await queryOne<BuyerProfileRecord>(
     `SELECT * FROM buyer_profiles WHERE user_id = ? LIMIT 1`,
     [userId]
   );
 }
 
-export function updateFarmerProfile(
+export async function updateFarmerProfile(
   userId: string,
   updates: Partial<FarmerProfileRecord>
-): FarmerProfileRecord | null {
-  const existing = getFarmerProfile(userId);
+) {
+  const existing = await getFarmerProfile(userId);
   if (!existing) {
     const id = `fp-${Date.now()}`;
-    execute(
+    await execute(
       `INSERT INTO farmer_profiles (id, user_id, farm_location, village, state, district)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -365,7 +365,7 @@ export function updateFarmerProfile(
         updates.district || null,
       ]
     );
-    return getFarmerProfile(userId);
+    return await getFarmerProfile(userId);
   }
 
   const farm_location = updates.farm_location !== undefined ? updates.farm_location : existing.farm_location;
@@ -373,24 +373,24 @@ export function updateFarmerProfile(
   const state = updates.state !== undefined ? updates.state : existing.state;
   const district = updates.district !== undefined ? updates.district : existing.district;
 
-  execute(
+  await execute(
     `UPDATE farmer_profiles
-     SET farm_location = ?, village = ?, state = ?, district = ?, updated_at = datetime('now')
+     SET farm_location = ?, village = ?, state = ?, district = ?, updated_at = now()
      WHERE user_id = ?`,
     [farm_location, village, state, district, userId]
   );
 
-  return getFarmerProfile(userId);
+  return await getFarmerProfile(userId);
 }
 
-export function updateBuyerProfile(
+export async function updateBuyerProfile(
   userId: string,
   updates: Partial<BuyerProfileRecord>
-): BuyerProfileRecord | null {
-  const existing = getBuyerProfile(userId);
+) {
+  const existing = await getBuyerProfile(userId);
   if (!existing) {
     const id = `bp-${Date.now()}`;
-    execute(
+    await execute(
       `INSERT INTO buyer_profiles (id, user_id, organization_name, business_type, location, state, district)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -403,7 +403,7 @@ export function updateBuyerProfile(
         updates.district || null,
       ]
     );
-    return getBuyerProfile(userId);
+    return await getBuyerProfile(userId);
   }
 
   const organization_name = updates.organization_name !== undefined ? updates.organization_name : existing.organization_name;
@@ -412,20 +412,20 @@ export function updateBuyerProfile(
   const state = updates.state !== undefined ? updates.state : existing.state;
   const district = updates.district !== undefined ? updates.district : existing.district;
 
-  execute(
+  await execute(
     `UPDATE buyer_profiles
-     SET organization_name = ?, business_type = ?, location = ?, state = ?, district = ?, updated_at = datetime('now')
+     SET organization_name = ?, business_type = ?, location = ?, state = ?, district = ?, updated_at = now()
      WHERE user_id = ?`,
     [organization_name, business_type, location, state, district, userId]
   );
 
-  return getBuyerProfile(userId);
+  return await getBuyerProfile(userId);
 }
 
 // ----------------------------------------------------
 // PRODUCE LISTINGS REPOSITORY
 // ----------------------------------------------------
-export function getProduceListings(filters: {
+export async function getProduceListings(filters: {
   farmerId?: string;
   status?: string;
   crop?: string;
@@ -439,7 +439,7 @@ export function getProduceListings(filters: {
   q?: string;
   minPrice?: number;
   maxPrice?: number;
-} = {}): ProduceListingRecord[] {
+} = {}) {
   let sql = `
     SELECT p.*, u.name as farmer_name, u.mobile as farmer_mobile, u.organization_name as fpo_name
     FROM produce_listings p
@@ -526,11 +526,11 @@ export function getProduceListings(filters: {
   }
 
   sql += ` ORDER BY p.created_at DESC`;
-  return queryAll<ProduceListingRecord>(sql, params);
+  return await queryAll<ProduceListingRecord>(sql, params);
 }
 
-export function getProduceListingById(id: string): ProduceListingRecord | null {
-  return queryOne<ProduceListingRecord>(
+export async function getProduceListingById(id: string) {
+  return await queryOne<ProduceListingRecord>(
     `SELECT p.*, u.name as farmer_name, u.mobile as farmer_mobile 
      FROM produce_listings p
      JOIN users u ON p.farmer_id = u.id
@@ -539,7 +539,7 @@ export function getProduceListingById(id: string): ProduceListingRecord | null {
   );
 }
 
-export function createProduceListing(data: {
+export async function createProduceListing(data: {
   farmer_id: string;
   crop_name: string;
   variety?: string;
@@ -555,10 +555,10 @@ export function createProduceListing(data: {
   state?: string;
   district?: string;
   market_location?: string;
-}): ProduceListingRecord {
+}) {
   const id = `lst_${crypto.randomUUID().slice(0, 12)}`;
 
-  execute(
+  await execute(
     `INSERT INTO produce_listings (
       id, farmer_id, crop_name, variety, quantity, quantity_unit, expected_price, price_unit,
       quality_grade, description, harvest_date, available_from, available_until,
@@ -584,17 +584,17 @@ export function createProduceListing(data: {
     ]
   );
 
-  const listing = getProduceListingById(id);
+  const listing = await getProduceListingById(id);
   if (!listing) throw new Error('Failed to create listing');
   return listing;
 }
 
-export function updateProduceListing(
+export async function updateProduceListing(
   id: string,
   farmerId: string,
   updates: Partial<ProduceListingRecord>
-): ProduceListingRecord | null {
-  const existing = getProduceListingById(id);
+) {
+  const existing = await getProduceListingById(id);
   if (!existing) return null;
   if (existing.farmer_id !== farmerId) {
     throw new Error('Unauthorized: You can only update your own listings');
@@ -616,11 +616,11 @@ export function updateProduceListing(
   const market_location = updates.market_location !== undefined ? updates.market_location : existing.market_location;
   const status = updates.status !== undefined ? updates.status : existing.status;
 
-  execute(
+  await execute(
     `UPDATE produce_listings
      SET crop_name = ?, variety = ?, quantity = ?, quantity_unit = ?, expected_price = ?, price_unit = ?,
          quality_grade = ?, description = ?, harvest_date = ?, available_from = ?, available_until = ?,
-         state = ?, district = ?, market_location = ?, status = ?, updated_at = datetime('now')
+         state = ?, district = ?, market_location = ?, status = ?, updated_at = now()
      WHERE id = ? AND farmer_id = ?`,
     [
       crop_name, variety, quantity, quantity_unit, expected_price, price_unit,
@@ -629,29 +629,29 @@ export function updateProduceListing(
     ]
   );
 
-  return getProduceListingById(id);
+  return await getProduceListingById(id);
 }
 
-export function deleteProduceListing(id: string, farmerId: string): boolean {
-  const existing = getProduceListingById(id);
+export async function deleteProduceListing(id: string, farmerId: string) {
+  const existing = await getProduceListingById(id);
   if (!existing) return false;
   if (existing.farmer_id !== farmerId) {
     throw new Error('Unauthorized: You can only delete your own listings');
   }
 
-  execute(`DELETE FROM produce_listings WHERE id = ? AND farmer_id = ?`, [id, farmerId]);
+  await execute(`DELETE FROM produce_listings WHERE id = ? AND farmer_id = ?`, [id, farmerId]);
   return true;
 }
 
 // ----------------------------------------------------
 // BUYER DEMANDS REPOSITORY
 // ----------------------------------------------------
-export function getBuyerDemands(filters: {
+export async function getBuyerDemands(filters: {
   buyerId?: string;
   status?: string;
   crop?: string;
   state?: string;
-} = {}): BuyerDemandRecord[] {
+} = {}) {
   let sql = `
     SELECT d.*, u.name as buyer_name, u.organization_name
     FROM buyer_demands d
@@ -678,11 +678,11 @@ export function getBuyerDemands(filters: {
   }
 
   sql += ` ORDER BY d.created_at DESC`;
-  return queryAll<BuyerDemandRecord>(sql, params);
+  return await queryAll<BuyerDemandRecord>(sql, params);
 }
 
-export function getBuyerDemandById(id: string): BuyerDemandRecord | null {
-  return queryOne<BuyerDemandRecord>(
+export async function getBuyerDemandById(id: string) {
+  return await queryOne<BuyerDemandRecord>(
     `SELECT d.*, u.name as buyer_name, u.organization_name
      FROM buyer_demands d
      JOIN users u ON d.buyer_id = u.id
@@ -691,7 +691,7 @@ export function getBuyerDemandById(id: string): BuyerDemandRecord | null {
   );
 }
 
-export function createBuyerDemand(data: {
+export async function createBuyerDemand(data: {
   buyer_id: string;
   crop_name: string;
   variety?: string;
@@ -705,10 +705,10 @@ export function createBuyerDemand(data: {
   district?: string;
   required_by?: string;
   description?: string;
-}): BuyerDemandRecord {
+}) {
   const id = `dem_${crypto.randomUUID().slice(0, 12)}`;
 
-  execute(
+  await execute(
     `INSERT INTO buyer_demands (
       id, buyer_id, crop_name, variety, required_quantity, quantity_unit, target_price, price_unit,
       quality_requirement, delivery_location, state, district, required_by, description, status
@@ -731,17 +731,17 @@ export function createBuyerDemand(data: {
     ]
   );
 
-  const demand = getBuyerDemandById(id);
+  const demand = await getBuyerDemandById(id);
   if (!demand) throw new Error('Failed to create buyer demand');
   return demand;
 }
 
-export function updateBuyerDemand(
+export async function updateBuyerDemand(
   id: string,
   buyerId: string,
   updates: Partial<BuyerDemandRecord>
-): BuyerDemandRecord | null {
-  const existing = getBuyerDemandById(id);
+) {
+  const existing = await getBuyerDemandById(id);
   if (!existing) return null;
   if (existing.buyer_id !== buyerId) {
     throw new Error('Unauthorized: You can only update your own requirements');
@@ -761,11 +761,11 @@ export function updateBuyerDemand(
   const description = updates.description !== undefined ? updates.description : existing.description;
   const status = updates.status !== undefined ? updates.status : existing.status;
 
-  execute(
+  await execute(
     `UPDATE buyer_demands
      SET crop_name = ?, variety = ?, required_quantity = ?, quantity_unit = ?, target_price = ?, price_unit = ?,
          quality_requirement = ?, delivery_location = ?, state = ?, district = ?, required_by = ?,
-         description = ?, status = ?, updated_at = datetime('now')
+         description = ?, status = ?, updated_at = now()
      WHERE id = ? AND buyer_id = ?`,
     [
       crop_name, variety, required_quantity, quantity_unit, target_price, price_unit,
@@ -774,30 +774,30 @@ export function updateBuyerDemand(
     ]
   );
 
-  return getBuyerDemandById(id);
+  return await getBuyerDemandById(id);
 }
 
-export function deleteBuyerDemand(id: string, buyerId: string): boolean {
-  const existing = getBuyerDemandById(id);
+export async function deleteBuyerDemand(id: string, buyerId: string) {
+  const existing = await getBuyerDemandById(id);
   if (!existing) return false;
   if (existing.buyer_id !== buyerId) {
     throw new Error('Unauthorized: You can only delete your own requirements');
   }
 
-  execute(`DELETE FROM buyer_demands WHERE id = ? AND buyer_id = ?`, [id, buyerId]);
+  await execute(`DELETE FROM buyer_demands WHERE id = ? AND buyer_id = ?`, [id, buyerId]);
   return true;
 }
 
 // ----------------------------------------------------
 // OFFERS & NEGOTIATION REPOSITORY
 // ----------------------------------------------------
-export function getOffers(filters: {
+export async function getOffers(filters: {
   buyerId?: string;
   farmerId?: string;
   listingId?: string;
   status?: string;
   originalOfferId?: string;
-} = {}): OfferRecord[] {
+} = {}) {
   let sql = `
     SELECT o.*, 
            p.crop_name, p.farmer_id as listing_farmer_id,
@@ -834,11 +834,11 @@ export function getOffers(filters: {
   }
 
   sql += ` ORDER BY o.created_at DESC`;
-  return queryAll<OfferRecord>(sql, params);
+  return await queryAll<OfferRecord>(sql, params);
 }
 
-export function getOfferById(id: string): OfferRecord | null {
-  return queryOne<OfferRecord>(
+export async function getOfferById(id: string) {
+  return await queryOne<OfferRecord>(
     `SELECT o.*, 
             p.crop_name, p.farmer_id as listing_farmer_id,
             COALESCE(p.market_location, p.district) as farmer_location,
@@ -853,8 +853,8 @@ export function getOfferById(id: string): OfferRecord | null {
   );
 }
 
-export function getOfferNegotiationHistory(offerId: string): OfferRecord[] {
-  const current = getOfferById(offerId);
+export async function getOfferNegotiationHistory(offerId: string) {
+  const current = await getOfferById(offerId);
   if (!current) return [];
 
   // Determine root offer id
@@ -872,25 +872,25 @@ export function getOfferNegotiationHistory(offerId: string): OfferRecord[] {
     WHERE o.id = ? OR o.original_offer_id = ? OR o.parent_offer_id = ?
     ORDER BY o.created_at ASC
   `;
-  return queryAll<OfferRecord>(sql, [rootId, rootId, rootId]);
+  return await queryAll<OfferRecord>(sql, [rootId, rootId, rootId]);
 }
 
-export function createOffer(data: {
+export async function createOffer(data: {
   listing_id: string;
   buyer_id: string;
   offered_price: number;
   quantity: number;
   quantity_unit?: string;
   message?: string;
-}): OfferRecord {
-  const listing = getProduceListingById(data.listing_id);
+}) {
+  const listing = await getProduceListingById(data.listing_id);
   if (!listing) throw new Error('Produce listing not found');
   if (listing.status !== 'active') throw new Error('Listing is no longer active');
 
   const id = `off_${crypto.randomUUID().slice(0, 12)}`;
   const farmerId = listing.farmer_id;
 
-  execute(
+  await execute(
     `INSERT INTO offers (
       id, listing_id, buyer_id, farmer_id, offered_price, quantity, quantity_unit, message, status, sender_role
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending', 'buyer')`,
@@ -906,11 +906,11 @@ export function createOffer(data: {
     ]
   );
 
-  const offer = getOfferById(id);
+  const offer = await getOfferById(id);
   if (!offer) throw new Error('Failed to create offer in PostgreSQL');
 
   // Notify farmer of new incoming offer
-  createNotification({
+  await createNotification({
     recipient_id: farmerId,
     type: 'offer_received',
     title: 'New Offer Received',
@@ -922,7 +922,7 @@ export function createOffer(data: {
   return offer;
 }
 
-export function createCounterOffer(data: {
+export async function createCounterOffer(data: {
   parent_offer_id: string;
   actor_id: string;
   actor_role: 'farmer' | 'buyer';
@@ -930,8 +930,8 @@ export function createCounterOffer(data: {
   quantity: number;
   quantity_unit?: string;
   message?: string;
-}): { counterOffer: OfferRecord; parentOffer: OfferRecord } {
-  const parent = getOfferById(data.parent_offer_id);
+}) {
+  const parent = await getOfferById(data.parent_offer_id);
   if (!parent) throw new Error('Original offer not found');
   
   const currentStatus = (parent.status || '').toLowerCase();
@@ -952,13 +952,13 @@ export function createCounterOffer(data: {
   const newOfferId = `off_${crypto.randomUUID().slice(0, 12)}`;
 
   // Mark parent offer as Countered
-  execute(
-    `UPDATE offers SET status = 'Countered', updated_at = datetime('now') WHERE id = ?`,
+  await execute(
+    `UPDATE offers SET status = 'Countered', updated_at = now() WHERE id = ?`,
     [parent.id]
   );
 
   // Insert child counter-offer
-  execute(
+  await execute(
     `INSERT INTO offers (
       id, listing_id, buyer_id, farmer_id, parent_offer_id, original_offer_id, sender_role,
       offered_price, quantity, quantity_unit, message, status
@@ -978,15 +978,15 @@ export function createCounterOffer(data: {
     ]
   );
 
-  const counterOffer = getOfferById(newOfferId)!;
-  const updatedParent = getOfferById(parent.id)!;
+  const counterOffer = await getOfferById(newOfferId)!;
+  const updatedParent = await getOfferById(parent.id)!;
 
   // Determine recipient for notification
   const recipientId = data.actor_role === 'farmer' ? parent.buyer_id : farmerId;
   const senderTitle = data.actor_role === 'farmer' ? 'Farmer' : 'Buyer';
 
   if (recipientId) {
-    createNotification({
+    await createNotification({
       recipient_id: recipientId,
       type: 'counter_offer',
       title: `Counter-Offer from ${senderTitle}`,
@@ -999,12 +999,12 @@ export function createCounterOffer(data: {
   return { counterOffer, parentOffer: updatedParent };
 }
 
-export function updateOfferStatus(
+export async function updateOfferStatus(
   id: string,
   newStatus: 'Accepted' | 'Rejected' | 'Countered' | 'accepted' | 'rejected' | 'withdrawn' | 'countered',
   actorId: string
-): { offer: OfferRecord; transaction?: TransactionRecord; order?: OrderRecord } {
-  const offer = getOfferById(id);
+) {
+  const offer = await getOfferById(id);
   if (!offer) throw new Error('Offer not found');
 
   const farmerId = offer.farmer_id || offer.listing_farmer_id;
@@ -1029,8 +1029,8 @@ export function updateOfferStatus(
     }
   }
 
-  execute(
-    `UPDATE offers SET status = ?, updated_at = datetime('now') WHERE id = ?`,
+  await execute(
+    `UPDATE offers SET status = ?, updated_at = now() WHERE id = ?`,
     [normalizedStatus, id]
   );
 
@@ -1038,7 +1038,7 @@ export function updateOfferStatus(
   let createdOrder: OrderRecord | undefined = undefined;
 
   if (normalizedStatus === 'Accepted') {
-    const listing = getProduceListingById(offer.listing_id);
+    const listing = await getProduceListingById(offer.listing_id);
     const cropName = offer.crop_name || listing?.crop_name || 'Agri Produce';
     const quantity = offer.quantity;
     const agreedPrice = offer.offered_price;
@@ -1047,7 +1047,7 @@ export function updateOfferStatus(
 
     // 1. Create Transaction (Starting at 'Accepted' stage)
     const txId = `tx_${crypto.randomUUID().slice(0, 12)}`;
-    execute(
+    await execute(
       `INSERT INTO transactions (
         id, farmer_id, buyer_id, listing_id, offer_id, crop_name, quantity, quantity_unit, agreed_price, total_amount, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Accepted')`,
@@ -1064,11 +1064,11 @@ export function updateOfferStatus(
         totalAmount
       ]
     );
-    createdTransaction = getTransactionById(txId) || undefined;
+    createdTransaction = await getTransactionById(txId) || undefined;
 
     // 2. Also create Order + Logistics record for existing pipeline compatibility
     const orderId = `ord_${crypto.randomUUID().slice(0, 12)}`;
-    execute(
+    await execute(
       `INSERT INTO orders (
         id, listing_id, farmer_id, buyer_id, offer_id, crop_name, quantity, quantity_unit, agreed_price, total_amount, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')`,
@@ -1087,7 +1087,7 @@ export function updateOfferStatus(
     );
 
     const logId = `log_${crypto.randomUUID().slice(0, 12)}`;
-    execute(
+    await execute(
       `INSERT INTO logistics (
         id, order_id, pickup_location, delivery_location, transporter_name, vehicle_number, status
       ) VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
@@ -1100,10 +1100,10 @@ export function updateOfferStatus(
         'MH-15-TC-4402'
       ]
     );
-    createdOrder = getOrderById(orderId) || undefined;
+    createdOrder = await getOrderById(orderId) || undefined;
 
     // Persistent notifications for both parties
-    createNotification({
+    await createNotification({
       recipient_id: offer.buyer_id,
       type: 'offer_accepted',
       title: 'Offer Accepted! 🎉',
@@ -1113,7 +1113,7 @@ export function updateOfferStatus(
     });
 
     if (farmerId) {
-      createNotification({
+      await createNotification({
         recipient_id: farmerId,
         type: 'offer_accepted',
         title: 'Deal Finalized! 🎉',
@@ -1125,7 +1125,7 @@ export function updateOfferStatus(
   } else if (normalizedStatus === 'Rejected') {
     const notifyRecipient = offer.sender_role === 'farmer' ? farmerId : offer.buyer_id;
     if (notifyRecipient) {
-      createNotification({
+      await createNotification({
         recipient_id: notifyRecipient,
         type: 'offer_rejected',
         title: 'Offer Declined',
@@ -1136,7 +1136,7 @@ export function updateOfferStatus(
     }
   }
 
-  const updatedOffer = getOfferById(id)!;
+  const updatedOffer = await getOfferById(id)!;
   return { offer: updatedOffer, transaction: createdTransaction, order: createdOrder };
 }
 
@@ -1154,11 +1154,11 @@ export const TRANSACTION_STATUS_FLOW = [
 
 export type TransactionStatus = typeof TRANSACTION_STATUS_FLOW[number];
 
-export function getTransactions(filters: {
+export async function getTransactions(filters: {
   farmerId?: string;
   buyerId?: string;
   status?: string;
-} = {}): TransactionRecord[] {
+} = {}) {
   let sql = `
     SELECT t.*,
            farmer_u.name as farmer_name,
@@ -1184,11 +1184,11 @@ export function getTransactions(filters: {
   }
 
   sql += ` ORDER BY t.created_at DESC`;
-  return queryAll<TransactionRecord>(sql, params);
+  return await queryAll<TransactionRecord>(sql, params);
 }
 
-export function getTransactionById(id: string): TransactionRecord | null {
-  return queryOne<TransactionRecord>(
+export async function getTransactionById(id: string) {
+  return await queryOne<TransactionRecord>(
     `SELECT t.*,
             farmer_u.name as farmer_name,
             buyer_u.name as buyer_name, buyer_u.organization_name as buyer_organization
@@ -1200,12 +1200,12 @@ export function getTransactionById(id: string): TransactionRecord | null {
   );
 }
 
-export function updateTransactionStatus(
+export async function updateTransactionStatus(
   id: string,
   newStatus: string,
   actorId?: string
-): TransactionRecord {
-  const transaction = getTransactionById(id);
+) {
+  const transaction = await getTransactionById(id);
   if (!transaction) throw new Error('Transaction not found');
 
   // Verify actor permission if actorId provided
@@ -1229,16 +1229,16 @@ export function updateTransactionStatus(
     );
   }
 
-  execute(
-    `UPDATE transactions SET status = ?, updated_at = datetime('now') WHERE id = ?`,
+  await execute(
+    `UPDATE transactions SET status = ?, updated_at = now() WHERE id = ?`,
     [newStatus, id]
   );
 
-  const updated = getTransactionById(id)!;
+  const updated = await getTransactionById(id)!;
 
   // Trigger persistent notifications for counterparty
   const notifyRecipient = actorId === transaction.farmer_id ? transaction.buyer_id : transaction.farmer_id;
-  createNotification({
+  await createNotification({
     recipient_id: notifyRecipient,
     type: 'transaction_status_changed',
     title: `Transaction Update: ${newStatus}`,
@@ -1253,19 +1253,19 @@ export function updateTransactionStatus(
 // ----------------------------------------------------
 // NOTIFICATIONS REPOSITORY
 // ----------------------------------------------------
-export function createNotification(data: {
+export async function createNotification(data: {
   recipient_id: string;
   type: string;
   title: string;
   message: string;
   related_entity_id?: string;
   related_entity_type?: string;
-}): NotificationRecord {
+}) {
   const id = `notif_${crypto.randomUUID().slice(0, 12)}`;
-  execute(
+  await execute(
     `INSERT INTO notifications (
       id, recipient_id, type, title, message, related_entity_id, related_entity_type, is_read
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, false)`,
     [
       id,
       data.recipient_id,
@@ -1277,46 +1277,46 @@ export function createNotification(data: {
     ]
   );
 
-  return queryOne<NotificationRecord>(`SELECT * FROM notifications WHERE id = ?`, [id])!;
+  return await queryOne<NotificationRecord>(`SELECT * FROM notifications WHERE id = ?`, [id])!;
 }
 
-export function getNotifications(recipientId?: string): NotificationRecord[] {
+export async function getNotifications(recipientId?: string) {
   if (recipientId) {
-    return queryAll<NotificationRecord>(
+    return await queryAll<NotificationRecord>(
       `SELECT * FROM notifications WHERE recipient_id = ? ORDER BY created_at DESC LIMIT 50`,
       [recipientId]
     );
   }
-  return queryAll<NotificationRecord>(
+  return await queryAll<NotificationRecord>(
     `SELECT * FROM notifications ORDER BY created_at DESC LIMIT 50`
   );
 }
 
-export function getUnreadNotificationCount(recipientId?: string): number {
+export async function getUnreadNotificationCount(recipientId?: string) {
   if (recipientId) {
-    const row = queryOne<{ count: number }>(
-      `SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND is_read = 0`,
+    const row = await queryOne<{ count: number }>(
+      `SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND is_read = false`,
       [recipientId]
     );
     return row?.count || 0;
   }
-  const row = queryOne<{ count: number }>(
-    `SELECT COUNT(*) as count FROM notifications WHERE is_read = 0`
+  const row = await queryOne<{ count: number }>(
+    `SELECT COUNT(*) as count FROM notifications WHERE is_read = false`
   );
   return row?.count || 0;
 }
 
-export function markNotificationAsRead(id: string, recipientId: string): boolean {
-  execute(
-    `UPDATE notifications SET is_read = 1 WHERE id = ? AND recipient_id = ?`,
+export async function markNotificationAsRead(id: string, recipientId: string) {
+  await execute(
+    `UPDATE notifications SET is_read = true WHERE id = ? AND recipient_id = ?`,
     [id, recipientId]
   );
   return true;
 }
 
-export function markAllNotificationsAsRead(recipientId: string): boolean {
-  execute(
-    `UPDATE notifications SET is_read = 1 WHERE recipient_id = ?`,
+export async function markAllNotificationsAsRead(recipientId: string) {
+  await execute(
+    `UPDATE notifications SET is_read = true WHERE recipient_id = ?`,
     [recipientId]
   );
   return true;
@@ -1326,11 +1326,11 @@ export function markAllNotificationsAsRead(recipientId: string): boolean {
 // ----------------------------------------------------
 // ORDERS REPOSITORY
 // ----------------------------------------------------
-export function getOrders(filters: {
+export async function getOrders(filters: {
   farmerId?: string;
   buyerId?: string;
   status?: string;
-} = {}): OrderRecord[] {
+} = {}) {
   let sql = `
     SELECT o.*,
            farmer_u.name as farmer_name,
@@ -1356,11 +1356,11 @@ export function getOrders(filters: {
   }
 
   sql += ` ORDER BY o.created_at DESC`;
-  return queryAll<OrderRecord>(sql, params);
+  return await queryAll<OrderRecord>(sql, params);
 }
 
-export function getOrderById(id: string): OrderRecord | null {
-  return queryOne<OrderRecord>(
+export async function getOrderById(id: string) {
+  return await queryOne<OrderRecord>(
     `SELECT o.*,
             farmer_u.name as farmer_name,
             buyer_u.name as buyer_name, buyer_u.organization_name as buyer_organization
@@ -1372,7 +1372,7 @@ export function getOrderById(id: string): OrderRecord | null {
   );
 }
 
-export function createOrder(data: {
+export async function createOrder(data: {
   listing_id?: string;
   farmer_id: string;
   buyer_id: string;
@@ -1381,11 +1381,11 @@ export function createOrder(data: {
   quantity: number;
   quantity_unit?: string;
   agreed_price: number;
-}): OrderRecord {
+}) {
   const orderId = `ord_${crypto.randomUUID().slice(0, 12)}`;
   const totalAmount = Math.round((Number(data.quantity) * (Number(data.agreed_price) / 100)) * 100) / 100;
 
-  execute(
+  await execute(
     `INSERT INTO orders (
       id, listing_id, farmer_id, buyer_id, offer_id, crop_name, quantity, quantity_unit, agreed_price, total_amount, status
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')`,
@@ -1405,7 +1405,7 @@ export function createOrder(data: {
 
   // Initialize logistics
   const logId = `log_${crypto.randomUUID().slice(0, 12)}`;
-  execute(
+  await execute(
     `INSERT INTO logistics (
       id, order_id, pickup_location, delivery_location, transporter_name, vehicle_number, status
     ) VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
@@ -1419,48 +1419,48 @@ export function createOrder(data: {
     ]
   );
 
-  const order = getOrderById(orderId);
+  const order = await getOrderById(orderId);
   if (!order) throw new Error('Failed to create order');
   return order;
 }
 
-export function updateOrderStatus(
+export async function updateOrderStatus(
   id: string,
   status: 'confirmed' | 'processing' | 'ready_for_delivery' | 'delivered' | 'completed' | 'cancelled'
-): OrderRecord | null {
-  execute(
-    `UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?`,
+) {
+  await execute(
+    `UPDATE orders SET status = ?, updated_at = now() WHERE id = ?`,
     [status, id]
   );
 
   // Synchronize logistics status if order completed or delivered
   if (status === 'delivered' || status === 'completed') {
-    execute(
-      `UPDATE logistics SET status = 'delivered', actual_delivery_date = datetime('now'), updated_at = datetime('now') WHERE order_id = ?`,
+    await execute(
+      `UPDATE logistics SET status = 'delivered', actual_delivery_date = now(), updated_at = now() WHERE order_id = ?`,
       [id]
     );
   } else if (status === 'processing' || status === 'ready_for_delivery') {
-    execute(
-      `UPDATE logistics SET status = 'in_transit', updated_at = datetime('now') WHERE order_id = ?`,
+    await execute(
+      `UPDATE logistics SET status = 'in_transit', updated_at = now() WHERE order_id = ?`,
       [id]
     );
   }
 
-  return getOrderById(id);
+  return await getOrderById(id);
 }
 
 // ----------------------------------------------------
 // LOGISTICS REPOSITORY
 // ----------------------------------------------------
-export function getLogisticsByOrderId(orderId: string): LogisticsRecord | null {
-  return queryOne<LogisticsRecord>(
+export async function getLogisticsByOrderId(orderId: string) {
+  return await queryOne<LogisticsRecord>(
     `SELECT * FROM logistics WHERE order_id = ? LIMIT 1`,
     [orderId]
   );
 }
 
-export function getAllLogistics(): (LogisticsRecord & { order?: OrderRecord })[] {
-  return queryAll<LogisticsRecord & { order?: OrderRecord }>(
+export async function getAllLogistics() {
+  return await queryAll<LogisticsRecord & { order?: OrderRecord }>(
     `SELECT l.*, o.crop_name, o.quantity, o.quantity_unit, o.status as order_status,
             farmer_u.name as farmer_name, buyer_u.name as buyer_name
      FROM logistics l
@@ -1471,7 +1471,7 @@ export function getAllLogistics(): (LogisticsRecord & { order?: OrderRecord })[]
   );
 }
 
-export function createOrUpdateLogistics(data: {
+export async function createOrUpdateLogistics(data: {
   order_id: string;
   pickup_location?: string;
   delivery_location?: string;
@@ -1479,8 +1479,8 @@ export function createOrUpdateLogistics(data: {
   vehicle_number?: string;
   estimated_delivery_date?: string;
   status?: 'pending' | 'pickup_scheduled' | 'in_transit' | 'delivered';
-}): LogisticsRecord {
-  const existing = getLogisticsByOrderId(data.order_id);
+}) {
+  const existing = await getLogisticsByOrderId(data.order_id);
 
   if (existing) {
     const pickup_location = data.pickup_location !== undefined ? data.pickup_location : existing.pickup_location;
@@ -1490,16 +1490,16 @@ export function createOrUpdateLogistics(data: {
     const estimated_delivery_date = data.estimated_delivery_date !== undefined ? data.estimated_delivery_date : existing.estimated_delivery_date;
     const status = data.status !== undefined ? data.status : existing.status;
 
-    execute(
+    await execute(
       `UPDATE logistics
        SET pickup_location = ?, delivery_location = ?, transporter_name = ?, vehicle_number = ?,
-           estimated_delivery_date = ?, status = ?, updated_at = datetime('now')
+           estimated_delivery_date = ?, status = ?, updated_at = now()
        WHERE order_id = ?`,
       [pickup_location, delivery_location, transporter_name, vehicle_number, estimated_delivery_date, status, data.order_id]
     );
   } else {
     const id = `log_${crypto.randomUUID().slice(0, 12)}`;
-    execute(
+    await execute(
       `INSERT INTO logistics (
         id, order_id, pickup_location, delivery_location, transporter_name, vehicle_number, estimated_delivery_date, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -1516,23 +1516,23 @@ export function createOrUpdateLogistics(data: {
     );
   }
 
-  return getLogisticsByOrderId(data.order_id)!;
+  return await getLogisticsByOrderId(data.order_id)!;
 }
 
-export function updateLogisticsStatus(
+export async function updateLogisticsStatus(
   orderId: string,
   status: 'pending' | 'pickup_scheduled' | 'in_transit' | 'delivered'
-): LogisticsRecord | null {
-  const actualDeliveryDate = status === 'delivered' ? "datetime('now')" : "actual_delivery_date";
-  execute(
+) {
+  const actualDeliveryDate = status === 'delivered' ? "now()" : "actual_delivery_date";
+  await execute(
     `UPDATE logistics 
      SET status = ?, 
-         actual_delivery_date = ${status === 'delivered' ? "datetime('now')" : "actual_delivery_date"}, 
-         updated_at = datetime('now')
+         actual_delivery_date = ${status === 'delivered' ? "now()" : "actual_delivery_date"}, 
+         updated_at = now()
      WHERE order_id = ?`,
     [status, orderId]
   );
-  return getLogisticsByOrderId(orderId);
+  return await getLogisticsByOrderId(orderId);
 }
 
 // ----------------------------------------------------
@@ -1549,15 +1549,8 @@ function calculateItemTotal(quantity: number, quantityUnit: string, unitPrice: n
   return Math.round((quantity * unitPrice) * 100) / 100;
 }
 
-export function getCartItems(buyerId: string): {
-  items: CartItemRecord[];
-  summary: {
-    totalItems: number;
-    totalQuantity: number;
-    subtotal: number;
-  };
-} {
-  const rows = queryAll<any>(
+export async function getCartItems(buyerId: string) {
+  const rows = await queryAll<any>(
     `SELECT * FROM cart_items WHERE buyer_id = ? ORDER BY created_at DESC`,
     [buyerId]
   );
@@ -1603,7 +1596,7 @@ export function getCartItems(buyerId: string): {
   };
 }
 
-export function addToCart(data: {
+export async function addToCart(data: {
   buyerId: string;
   listingId?: string | null;
   cropName: string;
@@ -1616,7 +1609,7 @@ export function addToCart(data: {
   priceUnit?: string;
   qualityGrade?: string | null;
   location?: string | null;
-}): CartItemRecord {
+}) {
   const buyerId = data.buyerId.trim();
   const cropName = data.cropName.trim();
   const farmerName = data.farmerName.trim();
@@ -1633,12 +1626,12 @@ export function addToCart(data: {
   // Check if item for this listing or crop already exists in cart for this buyer
   let existing: any = null;
   if (listingId) {
-    existing = queryOne<any>(
+    existing = await queryOne<any>(
       `SELECT * FROM cart_items WHERE buyer_id = ? AND listing_id = ? LIMIT 1`,
       [buyerId, listingId]
     );
   } else {
-    existing = queryOne<any>(
+    existing = await queryOne<any>(
       `SELECT * FROM cart_items WHERE buyer_id = ? AND crop_name = ? AND farmer_name = ? LIMIT 1`,
       [buyerId, cropName, farmerName]
     );
@@ -1646,11 +1639,11 @@ export function addToCart(data: {
 
   if (existing) {
     const newQuantity = Number(existing.quantity) + quantity;
-    execute(
-      `UPDATE cart_items SET quantity = ?, unit_price = ?, updated_at = datetime('now') WHERE id = ?`,
+    await execute(
+      `UPDATE cart_items SET quantity = ?, unit_price = ?, updated_at = now() WHERE id = ?`,
       [newQuantity, unitPrice, existing.id]
     );
-    const updated = queryOne<any>(`SELECT * FROM cart_items WHERE id = ?`, [existing.id]);
+    const updated = await queryOne<any>(`SELECT * FROM cart_items WHERE id = ?`, [existing.id]);
     return {
       ...updated,
       total_amount: calculateItemTotal(newQuantity, updated.quantity_unit, unitPrice, updated.price_unit),
@@ -1658,12 +1651,12 @@ export function addToCart(data: {
   }
 
   const id = `cart_${crypto.randomUUID().slice(0, 12)}`;
-  execute(
+  await execute(
     `INSERT INTO cart_items (
       id, buyer_id, listing_id, crop_name, variety, farmer_id, farmer_name,
       quantity, quantity_unit, unit_price, price_unit, quality_grade, location,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())`,
     [
       id,
       buyerId,
@@ -1702,19 +1695,19 @@ export function addToCart(data: {
   };
 }
 
-export function updateCartItemQuantity(id: string, quantity: number): CartItemRecord | null {
+export async function updateCartItemQuantity(id: string, quantity: number) {
   const cleanQty = Number(quantity);
   if (cleanQty <= 0) {
-    removeCartItem(id);
+    await removeCartItem(id);
     return null;
   }
 
-  execute(
-    `UPDATE cart_items SET quantity = ?, updated_at = datetime('now') WHERE id = ?`,
+  await execute(
+    `UPDATE cart_items SET quantity = ?, updated_at = now() WHERE id = ?`,
     [cleanQty, id]
   );
 
-  const item = queryOne<any>(`SELECT * FROM cart_items WHERE id = ?`, [id]);
+  const item = await queryOne<any>(`SELECT * FROM cart_items WHERE id = ?`, [id]);
   if (!item) return null;
 
   return {
@@ -1723,21 +1716,18 @@ export function updateCartItemQuantity(id: string, quantity: number): CartItemRe
   };
 }
 
-export function removeCartItem(id: string): boolean {
-  execute(`DELETE FROM cart_items WHERE id = ?`, [id]);
+export async function removeCartItem(id: string) {
+  await execute(`DELETE FROM cart_items WHERE id = ?`, [id]);
   return true;
 }
 
-export function clearCart(buyerId: string): boolean {
-  execute(`DELETE FROM cart_items WHERE buyer_id = ?`, [buyerId]);
+export async function clearCart(buyerId: string) {
+  await execute(`DELETE FROM cart_items WHERE buyer_id = ?`, [buyerId]);
   return true;
 }
 
-export function checkoutCart(buyerId: string, itemIds?: string[]): {
-  orders: OrderRecord[];
-  transactions: TransactionRecord[];
-} {
-  const { items } = getCartItems(buyerId);
+export async function checkoutCart(buyerId: string, itemIds?: string[]) {
+  const { items } = await getCartItems(buyerId);
   const itemsToOrder = itemIds && itemIds.length > 0
     ? items.filter((it) => itemIds.includes(it.id))
     : items;
@@ -1753,7 +1743,7 @@ export function checkoutCart(buyerId: string, itemIds?: string[]): {
     // Find or fallback farmer ID
     let farmerId = item.farmer_id;
     if (!farmerId && item.listing_id) {
-      const listing = getProduceListingById(item.listing_id);
+      const listing = await getProduceListingById(item.listing_id);
       if (listing?.farmer_id) farmerId = listing.farmer_id;
     }
     if (!farmerId) {
@@ -1765,10 +1755,10 @@ export function checkoutCart(buyerId: string, itemIds?: string[]): {
     const totalAmount = item.total_amount;
 
     // 1. Create order record
-    execute(
+    await execute(
       `INSERT INTO orders (
         id, listing_id, farmer_id, buyer_id, crop_name, quantity, quantity_unit, agreed_price, total_amount, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', now(), now())`,
       [
         orderId,
         item.listing_id || null,
@@ -1783,7 +1773,7 @@ export function checkoutCart(buyerId: string, itemIds?: string[]): {
     );
 
     // 2. Create logistics record
-    createOrUpdateLogistics({
+    await createOrUpdateLogistics({
       order_id: orderId,
       pickup_location: item.location || 'Farm Gate, Nashik Hub',
       delivery_location: 'Buyer Warehouse / Processing Center',
@@ -1793,10 +1783,10 @@ export function checkoutCart(buyerId: string, itemIds?: string[]): {
 
     // 3. Create transaction record for procurement contract & escrow flow
     const txId = `tx_${crypto.randomUUID().slice(0, 12)}`;
-    execute(
+    await execute(
       `INSERT INTO transactions (
         id, farmer_id, buyer_id, listing_id, crop_name, quantity, quantity_unit, agreed_price, total_amount, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Accepted', datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Accepted', now(), now())`,
       [
         txId,
         farmerId,
@@ -1811,7 +1801,7 @@ export function checkoutCart(buyerId: string, itemIds?: string[]): {
     );
 
     // 4. Notifications
-    createNotification({
+    await createNotification({
       recipient_id: farmerId,
       type: 'order',
       title: 'New Procurement Order Placed',
@@ -1820,7 +1810,7 @@ export function checkoutCart(buyerId: string, itemIds?: string[]): {
       related_entity_type: 'order',
     });
 
-    createNotification({
+    await createNotification({
       recipient_id: buyerId,
       type: 'order',
       title: 'Order Confirmed',
@@ -1829,14 +1819,14 @@ export function checkoutCart(buyerId: string, itemIds?: string[]): {
       related_entity_type: 'order',
     });
 
-    const fullOrder = getOrderById(orderId);
+    const fullOrder = await getOrderById(orderId);
     if (fullOrder) createdOrders.push(fullOrder);
 
-    const fullTx = getTransactionById(txId);
+    const fullTx = await getTransactionById(txId);
     if (fullTx) createdTransactions.push(fullTx);
 
     // Remove item from cart
-    removeCartItem(item.id);
+    await removeCartItem(item.id);
   }
 
   return {

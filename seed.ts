@@ -23,7 +23,7 @@ async function seed() {
 
   // 1. Create Farmer User
   console.log('Creating demo Farmer: Ramesh Kumar (9876543210 / password123)...');
-  const farmer = createUser({
+  const farmer = await createUser({
     role: 'farmer',
     name: 'Ramesh Kumar',
     mobile: '9876543210',
@@ -37,7 +37,7 @@ async function seed() {
 
   // 2. Create Buyer User
   console.log('Creating demo Buyer: FreshMart Foods (9123456780 / buyer123)...');
-  const buyer = createUser({
+  const buyer = await createUser({
     role: 'buyer',
     name: 'Priya Sharma',
     organization_name: 'FreshMart Foods Private Limited',
@@ -52,7 +52,7 @@ async function seed() {
 
   // 3. Create Produce Listings for Farmer
   console.log('Creating Produce Listings...');
-  const listing1 = createProduceListing({
+  const listing1 = await createProduceListing({
     farmer_id: farmer.id,
     crop_name: 'Tomatoes',
     variety: 'Hybrid (Abhinav)',
@@ -70,7 +70,7 @@ async function seed() {
     market_location: 'Nashik APMC Mandi'
   });
 
-  createProduceListing({
+  await createProduceListing({
     farmer_id: farmer.id,
     crop_name: 'Onions',
     variety: 'Nashik Red',
@@ -90,7 +90,7 @@ async function seed() {
 
   // 4. Create Buyer Demands
   console.log('Creating Buyer Procurement Demands...');
-  createBuyerDemand({
+  await createBuyerDemand({
     buyer_id: buyer.id,
     crop_name: 'Tomatoes',
     variety: 'Grade A Firm Red',
@@ -108,7 +108,7 @@ async function seed() {
 
   // 5. Create Sample Offer
   console.log('Creating sample Buyer Offer on Tomato listing...');
-  const offer = createOffer({
+  const offer = await createOffer({
     listing_id: listing1.id,
     buyer_id: buyer.id,
     offered_price: 2820,

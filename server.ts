@@ -710,7 +710,7 @@ app.get("/api/market-price-trends", async (req, res) => {
 // ----------------------------------------------------
 // 2. API: /api/government-sources
 // ----------------------------------------------------
-app.get("/api/government-sources", (req, res) => {
+app.get("/api/government-sources", async (req, res) => {
   res.json({
     status: "ok",
     count: OFFICIAL_GOVT_SOURCES.length,
@@ -755,13 +755,13 @@ function verifyAuthToken(req: express.Request): { id: string; role: string; name
 }
 
 // Optional / Required Auth Middleware
-function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+async function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const user = verifyAuthToken(req);
   if (!user) {
     // If not bearer token, allow mock header for seamless fallback if passed in client
     const fallbackId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
     if (fallbackId) {
-      const dbUser = findUserById(fallbackId);
+      const dbUser = await findUserById(fallbackId);
       if (dbUser) {
         (req as any).user = dbUser;
         return next();
@@ -776,7 +776,7 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
 // ----------------------------------------------------
 // 3. API: AUTHENTICATION (Register, Login, Me)
 // ----------------------------------------------------
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   try {
     const {
       role,
@@ -814,7 +814,7 @@ app.post("/api/auth/register", (req, res) => {
     // Check if user already exists
     const identifier = mobile || email;
     if (identifier) {
-      const existing = findUserByCredentials(identifier);
+      const existing = await findUserByCredentials(identifier);
       if (existing) {
         return res.status(409).json({
           success: false,
@@ -823,7 +823,7 @@ app.post("/api/auth/register", (req, res) => {
       }
     }
 
-    const newUser = createUser({
+    const newUser = await createUser({
       role,
       name: name.trim(),
       organization_name,
@@ -840,7 +840,7 @@ app.post("/api/auth/register", (req, res) => {
     });
 
     const token = generateToken(newUser);
-    const profile = role === "farmer" ? getFarmerProfile(newUser.id) : getBuyerProfile(newUser.id);
+    const profile = role === "farmer" ? await getFarmerProfile(newUser.id) : await getBuyerProfile(newUser.id);
 
     return res.status(201).json({
       success: true,
@@ -857,7 +857,7 @@ app.post("/api/auth/register", (req, res) => {
   }
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   try {
     const { role, name, mobile, email, identifier, password } = req.body;
 
@@ -874,12 +874,12 @@ app.post("/api/auth/login", (req, res) => {
       return res.status(400).json({ success: false, message: "Password must be at least 4 characters" });
     }
 
-    let user = findUserByCredentials(userIdentifier.trim());
+    let user = await findUserByCredentials(userIdentifier.trim());
     const effectiveRole = user?.role || role || (userIdentifier.includes("@") ? "buyer" : "farmer");
 
     // If user does not exist yet (e.g. first-time login), create account automatically
     if (!user) {
-      user = createUser({
+      user = await createUser({
         role: effectiveRole,
         name: name?.trim() || (effectiveRole === "farmer" ? "Farmer Producer" : "Enterprise Buyer"),
         organization_name: effectiveRole === "buyer" ? (name?.trim() || "") : undefined,
@@ -899,8 +899,8 @@ app.post("/api/auth/login", (req, res) => {
       }
     }
 
-    const safeUser = findUserById(user.id);
-    const profile = safeUser?.role === "farmer" ? getFarmerProfile(user.id) : getBuyerProfile(user.id);
+    const safeUser = await findUserById(user.id);
+    const profile = safeUser?.role === "farmer" ? await getFarmerProfile(user.id) : await getBuyerProfile(user.id);
     const token = generateToken(safeUser!);
 
     return res.json({
@@ -918,16 +918,16 @@ app.post("/api/auth/login", (req, res) => {
   }
 });
 
-app.get("/api/auth/me", (req, res) => {
+app.get("/api/auth/me", async (req, res) => {
   const authUser = verifyAuthToken(req);
   if (!authUser) {
     return res.status(401).json({ success: false, message: "Unauthorized or invalid token" });
   }
-  const user = findUserById(authUser.id);
+  const user = await findUserById(authUser.id);
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
   }
-  const profile = user.role === "farmer" ? getFarmerProfile(user.id) : getBuyerProfile(user.id);
+  const profile = user.role === "farmer" ? await getFarmerProfile(user.id) : await getBuyerProfile(user.id);
   return res.json({
     success: true,
     user: {
@@ -937,7 +937,7 @@ app.get("/api/auth/me", (req, res) => {
   });
 });
 
-app.put("/api/auth/profile", (req, res) => {
+app.put("/api/auth/profile", async (req, res) => {
   try {
     const authUser = verifyAuthToken(req);
     const userId = authUser?.id || req.body.id || req.body.userId;
@@ -945,7 +945,7 @@ app.put("/api/auth/profile", (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized or missing user ID" });
     }
 
-    const user = findUserById(userId);
+    const user = await findUserById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found in database" });
     }
@@ -964,7 +964,7 @@ app.put("/api/auth/profile", (req, res) => {
       location,
     } = req.body;
 
-    const updatedUser = updateUser(userId, {
+    const updatedUser = await updateUser(userId, {
       name: name !== undefined ? name.trim() : user.name,
       organization_name: organization_name !== undefined ? organization_name : user.organization_name,
       mobile: mobile !== undefined ? mobile : user.mobile,
@@ -976,14 +976,14 @@ app.put("/api/auth/profile", (req, res) => {
 
     let updatedProfile: any = null;
     if (user.role === "farmer") {
-      updatedProfile = updateFarmerProfile(userId, {
+      updatedProfile = await updateFarmerProfile(userId, {
         farm_location: farm_location || location,
         village,
         state,
         district,
       });
     } else {
-      updatedProfile = updateBuyerProfile(userId, {
+      updatedProfile = await updateBuyerProfile(userId, {
         organization_name: organization_name || name,
         business_type,
         location: location || farm_location,
@@ -1011,18 +1011,18 @@ app.put("/api/auth/profile", (req, res) => {
 // ----------------------------------------------------
 // USERS API
 // ----------------------------------------------------
-app.get("/api/users/:id", (req, res) => {
-  const user = findUserById(req.params.id);
+app.get("/api/users/:id", async (req, res) => {
+  const user = await findUserById(req.params.id);
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
   }
-  const profile = user.role === "farmer" ? getFarmerProfile(user.id) : getBuyerProfile(user.id);
+  const profile = user.role === "farmer" ? await getFarmerProfile(user.id) : await getBuyerProfile(user.id);
   return res.json({ success: true, user: { ...user, profile } });
 });
 
-app.put("/api/users/:id", (req, res) => {
+app.put("/api/users/:id", async (req, res) => {
   try {
-    const updated = updateUser(req.params.id, req.body);
+    const updated = await updateUser(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
@@ -1035,7 +1035,7 @@ app.put("/api/users/:id", (req, res) => {
 // ----------------------------------------------------
 // 4. API: PRODUCE LISTINGS (Farmer Catalog & Search)
 // ----------------------------------------------------
-app.get("/api/produce", (req, res) => {
+app.get("/api/produce", async (req, res) => {
   try {
     const {
       farmerId,
@@ -1053,7 +1053,7 @@ app.get("/api/produce", (req, res) => {
       maxPrice,
     } = req.query;
 
-    const listings = getProduceListings({
+    const listings = await getProduceListings({
       farmerId: farmerId as string,
       status: status as string,
       crop: (crop as string) || (commodity as string),
@@ -1075,15 +1075,15 @@ app.get("/api/produce", (req, res) => {
   }
 });
 
-app.get("/api/produce/:id", (req, res) => {
-  const listing = getProduceListingById(req.params.id);
+app.get("/api/produce/:id", async (req, res) => {
+  const listing = await getProduceListingById(req.params.id);
   if (!listing) {
     return res.status(404).json({ success: false, message: "Produce listing not found" });
   }
   return res.json({ success: true, listing });
 });
 
-app.post("/api/produce", (req, res) => {
+app.post("/api/produce", async (req, res) => {
   try {
     const {
       farmer_id,
@@ -1126,7 +1126,7 @@ app.post("/api/produce", (req, res) => {
       return res.status(400).json({ success: false, message: "A valid positive expected price is required" });
     }
 
-    const listing = createProduceListing({
+    const listing = await createProduceListing({
       farmer_id: fId,
       crop_name: crop,
       variety,
@@ -1155,7 +1155,7 @@ app.post("/api/produce", (req, res) => {
   }
 });
 
-app.put("/api/produce/:id", (req, res) => {
+app.put("/api/produce/:id", async (req, res) => {
   try {
     const { farmer_id, farmerId } = req.body;
     const fId = farmer_id || farmerId;
@@ -1163,7 +1163,7 @@ app.put("/api/produce/:id", (req, res) => {
       return res.status(400).json({ success: false, message: "Farmer ID is required for verification" });
     }
 
-    const updated = updateProduceListing(req.params.id, fId, req.body);
+    const updated = await updateProduceListing(req.params.id, fId, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, message: "Listing not found" });
     }
@@ -1174,13 +1174,13 @@ app.put("/api/produce/:id", (req, res) => {
   }
 });
 
-app.delete("/api/produce/:id", (req, res) => {
+app.delete("/api/produce/:id", async (req, res) => {
   try {
     const farmerId = (req.query.farmerId as string) || req.body.farmerId || req.body.farmer_id;
     if (!farmerId) {
       return res.status(400).json({ success: false, message: "Farmer ID is required" });
     }
-    const success = deleteProduceListing(req.params.id, farmerId);
+    const success = await deleteProduceListing(req.params.id, farmerId);
     if (!success) {
       return res.status(404).json({ success: false, message: "Listing not found or unauthorized" });
     }
@@ -1193,10 +1193,10 @@ app.delete("/api/produce/:id", (req, res) => {
 // ----------------------------------------------------
 // 5. API: BUYER DEMANDS (Procurement Requirements)
 // ----------------------------------------------------
-app.get("/api/buyer-demands", (req, res) => {
+app.get("/api/buyer-demands", async (req, res) => {
   try {
     const { buyerId, status, crop, state } = req.query;
-    const demands = getBuyerDemands({
+    const demands = await getBuyerDemands({
       buyerId: buyerId as string,
       status: status as string,
       crop: crop as string,
@@ -1209,15 +1209,15 @@ app.get("/api/buyer-demands", (req, res) => {
   }
 });
 
-app.get("/api/buyer-demands/:id", (req, res) => {
-  const demand = getBuyerDemandById(req.params.id);
+app.get("/api/buyer-demands/:id", async (req, res) => {
+  const demand = await getBuyerDemandById(req.params.id);
   if (!demand) {
     return res.status(404).json({ success: false, message: "Buyer demand not found" });
   }
   return res.json({ success: true, demand });
 });
 
-app.post("/api/buyer-demands", (req, res) => {
+app.post("/api/buyer-demands", async (req, res) => {
   try {
     const {
       buyer_id,
@@ -1260,7 +1260,7 @@ app.post("/api/buyer-demands", (req, res) => {
       return res.status(400).json({ success: false, message: "A valid positive target price is required" });
     }
 
-    const demand = createBuyerDemand({
+    const demand = await createBuyerDemand({
       buyer_id: bId,
       crop_name: crop,
       variety,
@@ -1287,14 +1287,14 @@ app.post("/api/buyer-demands", (req, res) => {
   }
 });
 
-app.put("/api/buyer-demands/:id", (req, res) => {
+app.put("/api/buyer-demands/:id", async (req, res) => {
   try {
     const { buyer_id, buyerId } = req.body;
     const bId = buyer_id || buyerId;
     if (!bId) {
       return res.status(400).json({ success: false, message: "Buyer ID is required" });
     }
-    const updated = updateBuyerDemand(req.params.id, bId, req.body);
+    const updated = await updateBuyerDemand(req.params.id, bId, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, message: "Buyer demand not found" });
     }
@@ -1304,13 +1304,13 @@ app.put("/api/buyer-demands/:id", (req, res) => {
   }
 });
 
-app.delete("/api/buyer-demands/:id", (req, res) => {
+app.delete("/api/buyer-demands/:id", async (req, res) => {
   try {
     const buyerId = (req.query.buyerId as string) || req.body.buyerId || req.body.buyer_id;
     if (!buyerId) {
       return res.status(400).json({ success: false, message: "Buyer ID is required" });
     }
-    const success = deleteBuyerDemand(req.params.id, buyerId);
+    const success = await deleteBuyerDemand(req.params.id, buyerId);
     if (!success) {
       return res.status(404).json({ success: false, message: "Demand not found or unauthorized" });
     }
@@ -1323,10 +1323,10 @@ app.delete("/api/buyer-demands/:id", (req, res) => {
 // ----------------------------------------------------
 // 6. API: OFFERS & NEGOTIATION (Bids, Counters, Acceptance)
 // ----------------------------------------------------
-app.get("/api/offers", (req, res) => {
+app.get("/api/offers", async (req, res) => {
   try {
     const { buyerId, farmerId, listingId, status, originalOfferId } = req.query;
-    const offers = getOffers({
+    const offers = await getOffers({
       buyerId: buyerId as string,
       farmerId: farmerId as string,
       listingId: listingId as string,
@@ -1340,25 +1340,25 @@ app.get("/api/offers", (req, res) => {
   }
 });
 
-app.get("/api/offers/:id", (req, res) => {
-  const offer = getOfferById(req.params.id);
+app.get("/api/offers/:id", async (req, res) => {
+  const offer = await getOfferById(req.params.id);
   if (!offer) {
     return res.status(404).json({ success: false, message: "Offer not found" });
   }
-  const history = getOfferNegotiationHistory(offer.id);
+  const history = await getOfferNegotiationHistory(offer.id);
   return res.json({ success: true, offer, history });
 });
 
-app.get("/api/offers/:id/history", (req, res) => {
+app.get("/api/offers/:id/history", async (req, res) => {
   try {
-    const history = getOfferNegotiationHistory(req.params.id);
+    const history = await getOfferNegotiationHistory(req.params.id);
     return res.json({ success: true, count: history.length, history });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
 });
 
-app.post("/api/offers", (req, res) => {
+app.post("/api/offers", async (req, res) => {
   try {
     const { listing_id, listingId, buyer_id, buyerId, offered_price, offeredPrice, quantity, quantity_unit, message } = req.body;
 
@@ -1379,7 +1379,7 @@ app.post("/api/offers", (req, res) => {
       return res.status(400).json({ success: false, message: "A valid positive quantity is required" });
     }
 
-    const offer = createOffer({
+    const offer = await createOffer({
       listing_id: listId,
       buyer_id: bId,
       offered_price: Number(price),
@@ -1400,7 +1400,7 @@ app.post("/api/offers", (req, res) => {
 });
 
 // Counter-Offer endpoint
-app.post("/api/offers/:id/counter", (req, res) => {
+app.post("/api/offers/:id/counter", async (req, res) => {
   try {
     const { 
       actor_id, actorId, 
@@ -1423,7 +1423,7 @@ app.post("/api/offers/:id/counter", (req, res) => {
       return res.status(400).json({ success: false, message: "Valid positive counter price is required" });
     }
 
-    const parentOffer = getOfferById(req.params.id);
+    const parentOffer = await getOfferById(req.params.id);
     if (!parentOffer) {
       return res.status(404).json({ success: false, message: "Original offer not found" });
     }
@@ -1433,7 +1433,7 @@ app.post("/api/offers/:id/counter", (req, res) => {
       return res.status(400).json({ success: false, message: "Valid positive quantity is required" });
     }
 
-    const result = createCounterOffer({
+    const result = await createCounterOffer({
       parent_offer_id: req.params.id,
       actor_id: userActorId,
       actor_role: userActorRole as "farmer" | "buyer",
@@ -1457,14 +1457,14 @@ app.post("/api/offers/:id/counter", (req, res) => {
 });
 
 // Explicit Accept endpoint
-app.post("/api/offers/:id/accept", (req, res) => {
+app.post("/api/offers/:id/accept", async (req, res) => {
   try {
     const { actor_id, actorId } = req.body;
     const userActorId = actor_id || actorId;
     if (!userActorId) {
       return res.status(400).json({ success: false, message: "Actor ID is required for verification" });
     }
-    const result = updateOfferStatus(req.params.id, "Accepted", userActorId);
+    const result = await updateOfferStatus(req.params.id, "Accepted", userActorId);
     return res.json({
       success: true,
       message: "Offer accepted! Transaction created.",
@@ -1479,14 +1479,14 @@ app.post("/api/offers/:id/accept", (req, res) => {
 });
 
 // Explicit Reject endpoint
-app.post("/api/offers/:id/reject", (req, res) => {
+app.post("/api/offers/:id/reject", async (req, res) => {
   try {
     const { actor_id, actorId } = req.body;
     const userActorId = actor_id || actorId;
     if (!userActorId) {
       return res.status(400).json({ success: false, message: "Actor ID is required for verification" });
     }
-    const result = updateOfferStatus(req.params.id, "Rejected", userActorId);
+    const result = await updateOfferStatus(req.params.id, "Rejected", userActorId);
     return res.json({
       success: true,
       message: "Offer rejected.",
@@ -1498,7 +1498,7 @@ app.post("/api/offers/:id/reject", (req, res) => {
   }
 });
 
-app.put("/api/offers/:id", (req, res) => {
+app.put("/api/offers/:id", async (req, res) => {
   try {
     const { status, actor_id, actorId } = req.body;
     const userActorId = actor_id || actorId;
@@ -1510,7 +1510,7 @@ app.put("/api/offers/:id", (req, res) => {
       return res.status(400).json({ success: false, message: "Actor ID is required for verification" });
     }
 
-    const result = updateOfferStatus(req.params.id, status, userActorId);
+    const result = await updateOfferStatus(req.params.id, status, userActorId);
     return res.json({
       success: true,
       message: result.transaction ? "Offer accepted! Transaction created." : `Offer status updated to ${result.offer.status}`,
@@ -1528,10 +1528,10 @@ app.put("/api/offers/:id", (req, res) => {
 // 7. API: TRANSACTIONS (5-Stage Farmer-Buyer State Flow)
 // Accepted -> Payment Pending -> Payment Completed -> Delivery/Pickup -> Completed
 // ----------------------------------------------------
-app.get("/api/transactions", (req, res) => {
+app.get("/api/transactions", async (req, res) => {
   try {
     const { farmerId, buyerId, status } = req.query;
-    const transactions = getTransactions({
+    const transactions = await getTransactions({
       farmerId: farmerId as string,
       buyerId: buyerId as string,
       status: status as string,
@@ -1543,9 +1543,9 @@ app.get("/api/transactions", (req, res) => {
   }
 });
 
-app.get("/api/transactions/:id", (req, res) => {
+app.get("/api/transactions/:id", async (req, res) => {
   try {
-    const transaction = getTransactionById(req.params.id);
+    const transaction = await getTransactionById(req.params.id);
     if (!transaction) {
       return res.status(404).json({ success: false, message: "Transaction not found" });
     }
@@ -1555,7 +1555,7 @@ app.get("/api/transactions/:id", (req, res) => {
   }
 });
 
-const handleUpdateTransactionStatus = (req: express.Request, res: express.Response) => {
+const handleUpdateTransactionStatus = async (req: express.Request, res: express.Response) => {
   try {
     const { status, actor_id, actorId } = req.body;
     const userActorId = actor_id || actorId;
@@ -1564,7 +1564,7 @@ const handleUpdateTransactionStatus = (req: express.Request, res: express.Respon
       return res.status(400).json({ success: false, message: "New status is required" });
     }
 
-    const updated = updateTransactionStatus(req.params.id, status, userActorId);
+    const updated = await updateTransactionStatus(req.params.id, status, userActorId);
     return res.json({
       success: true,
       message: `Transaction state successfully moved to '${status}'`,
@@ -1582,11 +1582,11 @@ app.patch("/api/transactions/:id/status", handleUpdateTransactionStatus);
 // ----------------------------------------------------
 // 8. API: PERSISTENT NOTIFICATIONS
 // ----------------------------------------------------
-app.get("/api/notifications", (req, res) => {
+app.get("/api/notifications", async (req, res) => {
   try {
     const recipientId = (req.query.recipientId as string) || (req.query.userId as string);
-    const notifications = getNotifications(recipientId);
-    const unreadCount = getUnreadNotificationCount(recipientId);
+    const notifications = await getNotifications(recipientId);
+    const unreadCount = await getUnreadNotificationCount(recipientId);
     return res.json({ success: true, unreadCount, count: notifications.length, notifications });
   } catch (error: any) {
     console.error("Error fetching notifications:", error);
@@ -1594,26 +1594,26 @@ app.get("/api/notifications", (req, res) => {
   }
 });
 
-app.patch("/api/notifications/:id/read", (req, res) => {
+app.patch("/api/notifications/:id/read", async (req, res) => {
   try {
     const recipientId = (req.body.recipientId as string) || (req.query.recipientId as string) || (req.body.userId as string);
     if (!recipientId) {
       return res.status(400).json({ success: false, message: "Recipient ID is required" });
     }
-    markNotificationAsRead(req.params.id, recipientId);
+    await markNotificationAsRead(req.params.id, recipientId);
     return res.json({ success: true, message: "Notification marked as read" });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
 });
 
-app.post("/api/notifications/mark-all-read", (req, res) => {
+app.post("/api/notifications/mark-all-read", async (req, res) => {
   try {
     const recipientId = (req.body.recipientId as string) || (req.body.userId as string);
     if (!recipientId) {
       return res.status(400).json({ success: false, message: "Recipient ID is required" });
     }
-    markAllNotificationsAsRead(recipientId);
+    await markAllNotificationsAsRead(recipientId);
     return res.json({ success: true, message: "All notifications marked as read" });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -1623,10 +1623,10 @@ app.post("/api/notifications/mark-all-read", (req, res) => {
 // ----------------------------------------------------
 // 7. API: ORDERS & TRANSACTIONS
 // ----------------------------------------------------
-app.get("/api/orders", (req, res) => {
+app.get("/api/orders", async (req, res) => {
   try {
     const { farmerId, buyerId, status } = req.query;
-    const orders = getOrders({
+    const orders = await getOrders({
       farmerId: farmerId as string,
       buyerId: buyerId as string,
       status: status as string,
@@ -1638,16 +1638,16 @@ app.get("/api/orders", (req, res) => {
   }
 });
 
-app.get("/api/orders/:id", (req, res) => {
-  const order = getOrderById(req.params.id);
+app.get("/api/orders/:id", async (req, res) => {
+  const order = await getOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ success: false, message: "Order not found" });
   }
-  const logistics = getLogisticsByOrderId(order.id);
+  const logistics = await getLogisticsByOrderId(order.id);
   return res.json({ success: true, order: { ...order, logistics } });
 });
 
-app.post("/api/orders", (req, res) => {
+app.post("/api/orders", async (req, res) => {
   try {
     const { listing_id, farmer_id, buyer_id, offer_id, crop_name, quantity, quantity_unit, agreed_price } = req.body;
 
@@ -1655,7 +1655,7 @@ app.post("/api/orders", (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required order fields" });
     }
 
-    const order = createOrder({
+    const order = await createOrder({
       listing_id,
       farmer_id,
       buyer_id,
@@ -1677,13 +1677,13 @@ app.post("/api/orders", (req, res) => {
   }
 });
 
-app.put("/api/orders/:id", (req, res) => {
+app.put("/api/orders/:id", async (req, res) => {
   try {
     const { status } = req.body;
     if (!status) {
       return res.status(400).json({ success: false, message: "Status is required" });
     }
-    const order = updateOrderStatus(req.params.id, status);
+    const order = await updateOrderStatus(req.params.id, status);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
@@ -1696,13 +1696,13 @@ app.put("/api/orders/:id", (req, res) => {
 // ----------------------------------------------------
 // 7.1 API: BUYER CART (Persistent PostgreSQL/SQLite)
 // ----------------------------------------------------
-app.get("/api/cart", (req, res) => {
+app.get("/api/cart", async (req, res) => {
   try {
     const buyerId = (req.query.buyerId as string) || (req.query.buyer_id as string);
     if (!buyerId) {
       return res.status(400).json({ success: false, message: "buyerId is required" });
     }
-    const { items, summary } = getCartItems(buyerId);
+    const { items, summary } = await getCartItems(buyerId);
     return res.json({ success: true, items, summary });
   } catch (error: any) {
     console.error("Error fetching cart:", error);
@@ -1710,7 +1710,7 @@ app.get("/api/cart", (req, res) => {
   }
 });
 
-app.post("/api/cart", (req, res) => {
+app.post("/api/cart", async (req, res) => {
   try {
     const {
       buyerId,
@@ -1749,7 +1749,7 @@ app.post("/api/cart", (req, res) => {
       });
     }
 
-    const item = addToCart({
+    const item = await addToCart({
       buyerId: bId,
       listingId: listingId || listing_id || null,
       cropName: cName,
@@ -1764,7 +1764,7 @@ app.post("/api/cart", (req, res) => {
       location: location || null,
     });
 
-    const { summary } = getCartItems(bId);
+    const { summary } = await getCartItems(bId);
 
     return res.status(201).json({
       success: true,
@@ -1778,7 +1778,7 @@ app.post("/api/cart", (req, res) => {
   }
 });
 
-app.put("/api/cart/:id", (req, res) => {
+app.put("/api/cart/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity } = req.body;
@@ -1786,7 +1786,7 @@ app.put("/api/cart/:id", (req, res) => {
       return res.status(400).json({ success: false, message: "Valid quantity is required" });
     }
 
-    const item = updateCartItemQuantity(id, Number(quantity));
+    const item = await updateCartItemQuantity(id, Number(quantity));
     return res.json({
       success: true,
       message: item ? "Cart item quantity updated" : "Item removed from cart",
@@ -1798,10 +1798,10 @@ app.put("/api/cart/:id", (req, res) => {
   }
 });
 
-app.delete("/api/cart/:id", (req, res) => {
+app.delete("/api/cart/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    removeCartItem(id);
+    await removeCartItem(id);
     return res.json({ success: true, message: "Item removed from cart" });
   } catch (error: any) {
     console.error("Error removing cart item:", error);
@@ -1809,13 +1809,13 @@ app.delete("/api/cart/:id", (req, res) => {
   }
 });
 
-app.delete("/api/cart", (req, res) => {
+app.delete("/api/cart", async (req, res) => {
   try {
     const buyerId = (req.query.buyerId as string) || (req.query.buyer_id as string);
     if (!buyerId) {
       return res.status(400).json({ success: false, message: "buyerId is required" });
     }
-    clearCart(buyerId);
+    await clearCart(buyerId);
     return res.json({ success: true, message: "Cart cleared successfully" });
   } catch (error: any) {
     console.error("Error clearing cart:", error);
@@ -1823,7 +1823,7 @@ app.delete("/api/cart", (req, res) => {
   }
 });
 
-app.post("/api/cart/checkout", (req, res) => {
+app.post("/api/cart/checkout", async (req, res) => {
   try {
     const { buyerId, buyer_id, itemIds } = req.body;
     const bId = buyerId || buyer_id;
@@ -1831,7 +1831,7 @@ app.post("/api/cart/checkout", (req, res) => {
       return res.status(400).json({ success: false, message: "buyerId is required to checkout" });
     }
 
-    const result = checkoutCart(bId, itemIds);
+    const result = await checkoutCart(bId, itemIds);
 
     return res.status(201).json({
       success: true,
@@ -1848,44 +1848,44 @@ app.post("/api/cart/checkout", (req, res) => {
 // ----------------------------------------------------
 // 8. API: LOGISTICS
 // ----------------------------------------------------
-app.get("/api/logistics", (req, res) => {
+app.get("/api/logistics", async (req, res) => {
   try {
-    const records = getAllLogistics();
+    const records = await getAllLogistics();
     return res.json({ success: true, count: records.length, logistics: records });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
 });
 
-app.get("/api/logistics/:orderId", (req, res) => {
-  const record = getLogisticsByOrderId(req.params.orderId);
+app.get("/api/logistics/:orderId", async (req, res) => {
+  const record = await getLogisticsByOrderId(req.params.orderId);
   if (!record) {
     return res.status(404).json({ success: false, message: "Logistics record not found for this order" });
   }
   return res.json({ success: true, logistics: record });
 });
 
-app.post("/api/logistics", (req, res) => {
+app.post("/api/logistics", async (req, res) => {
   try {
     const { order_id, orderId } = req.body;
     const ordId = order_id || orderId;
     if (!ordId) {
       return res.status(400).json({ success: false, message: "Order ID is required" });
     }
-    const logistics = createOrUpdateLogistics({ ...req.body, order_id: ordId });
+    const logistics = await createOrUpdateLogistics({ ...req.body, order_id: ordId });
     return res.status(201).json({ success: true, message: "Logistics updated", logistics });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
 });
 
-app.put("/api/logistics/:orderId", (req, res) => {
+app.put("/api/logistics/:orderId", async (req, res) => {
   try {
     const { status } = req.body;
     if (!status || !["pending", "pickup_scheduled", "in_transit", "delivered"].includes(status)) {
       return res.status(400).json({ success: false, message: "Valid logistics status is required" });
     }
-    const updated = updateLogisticsStatus(req.params.orderId, status);
+    const updated = await updateLogisticsStatus(req.params.orderId, status);
     if (!updated) {
       return res.status(404).json({ success: false, message: "Logistics record not found" });
     }
@@ -2086,7 +2086,7 @@ ${liveDataContext}`;
 // ----------------------------------------------------
 // 5. Other Structured Endpoints (Crop production, weather, soil)
 // ----------------------------------------------------
-app.get("/api/crop-production", (req, res) => {
+app.get("/api/crop-production", async (req, res) => {
   const { crop, year, state } = req.query;
   res.json({
     status: "api_ready",
@@ -2099,7 +2099,7 @@ app.get("/api/crop-production", (req, res) => {
   });
 });
 
-app.get("/api/weather", (req, res) => {
+app.get("/api/weather", async (req, res) => {
   const { lat, lon, district, state } = req.query;
   res.json({
     status: "api_ready",
@@ -2112,7 +2112,7 @@ app.get("/api/weather", (req, res) => {
   });
 });
 
-app.get("/api/soil", (req, res) => {
+app.get("/api/soil", async (req, res) => {
   const { district, state, soilType } = req.query;
   res.json({
     status: "api_ready",
@@ -2126,7 +2126,7 @@ app.get("/api/soil", (req, res) => {
 });
 
 // Health check
-app.get("/api/health", (req, res) => {
+app.get("/api/health", async (req, res) => {
   res.json({
     status: "ok",
     appName: "AgriLink",
@@ -2142,11 +2142,11 @@ app.get("/api/health", (req, res) => {
 // ----------------------------------------------------
 async function startServer() {
   try {
-    // Initialize SQLite Database and Schema
+    // Connect to Postgres (Supabase) and verify connectivity
     await getDb();
-    console.log("🌾 SQLite database (agrilink.db) initialized successfully.");
+    console.log("🌾 Connected to Supabase Postgres database successfully.");
   } catch (dbErr) {
-    console.error("Failed to initialize SQLite database:", dbErr);
+    console.error("Failed to connect to Supabase Postgres database:", dbErr);
   }
 
   if (process.env.NODE_ENV !== "production") {
@@ -2158,7 +2158,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("*", async (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
