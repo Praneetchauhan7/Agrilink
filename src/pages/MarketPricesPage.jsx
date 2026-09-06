@@ -101,9 +101,9 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '' }
                 <TrendingUp size={12} /> {t('marketIntelligence.feedBadge', 'Live Mandi Feed')}
               </span>
             </div>
-            <h1 className="page-title">{t('marketPrices.pageTitle', 'Mandi Price Discovery & Trends')}</h1>
+            <h1 className="page-title">{t('market.title', 'Mandi Price Discovery & Trends')}</h1>
             <p className="page-subtitle">
-              {t('marketPrices.pageSubtitle', 'Daily modal prices and market trajectories connecting Indian APMC mandis to empower farm gate price negotiation.')}
+              {t('market.subtitle', 'Daily modal prices and market trajectories connecting Indian APMC mandis to empower farm gate price negotiation.')}
             </p>
           </div>
 

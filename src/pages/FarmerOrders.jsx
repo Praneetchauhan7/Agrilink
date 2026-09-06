@@ -36,7 +36,7 @@ export default function FarmerOrders({
   return (
     <div className="page-content">
       <div className="page-header">
-        <h1 className="page-title">{t('orders.farmerOrdersTitle', 'Orders & Contract Transactions')}</h1>
+        <h1 className="page-title">{t('orders.title', 'Orders & Contract Transactions')}</h1>
         <p className="page-subtitle">
           {t('orders.farmerOrdersSubtitle', 'Track 5-stage contract settlements, escrow balances, and delivery progress.')}
         </p>
