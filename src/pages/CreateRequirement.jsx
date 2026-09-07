@@ -57,7 +57,7 @@ export default function CreateRequirement({
   return (
     <div className="page-content">
       <div className="page-header">
-        <h1 className="page-title">{t('req.createTitle', 'Create Bulk Procurement Requirement')}</h1>
+        <h1 className="page-title">{t('nav.createRequirement', 'Create Bulk Procurement Requirement')}</h1>
         <p className="page-subtitle">
           {t('req.createSubtitle', 'Define your required agricultural produce, volume, and quality constraints to discover aggregated multi-farmer supply pools.')}
         </p>

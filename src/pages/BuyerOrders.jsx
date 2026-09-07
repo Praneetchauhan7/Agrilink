@@ -21,7 +21,7 @@ export default function BuyerOrders({
       <div className="page-header">
         <div className="page-header-row">
           <div>
-            <h1 className="page-title">{t('orders.procurementOrdersTitle', 'Procurement Orders & Settlements')}</h1>
+            <h1 className="page-title">{t('orders.title', 'Procurement Orders & Settlements')}</h1>
             <p className="page-subtitle">
               {t('orders.procurementOrdersSubtitle', 'Track 5-stage contract settlements, direct farm gate shipments, and automated escrow payouts.')}
             </p>

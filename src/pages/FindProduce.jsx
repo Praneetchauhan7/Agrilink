@@ -101,7 +101,9 @@ export default function FindProduce({
       <div className="page-header">
         <div className="page-header-row">
           <div>
-            <h1 className="page-title">{t('findProduce.title', 'Find Produce & Farmer Network')}</h1>
+            <h1 className="page-title">
+              {t('nav.findProduce', 'Find Produce')} &amp; {t('nav.farmerNetwork', 'Farmer Network')}
+            </h1>
             <p className="page-subtitle">
               {t('findProduce.subtitle', 'Live PostgreSQL search across verified Indian growers, mandis, and commodities.')}
             </p>
