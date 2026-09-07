@@ -18,6 +18,7 @@ import {
   ArrowLeft 
 } from 'lucide-react';
 import { LANGUAGES } from '../constants/languages';
+import { INDIAN_LOCATIONS } from '../constants/locations';
 import { useLanguage } from '../context/LanguageContext';
 import '../styles/landing.css';
 
@@ -29,6 +30,11 @@ export default function Landing({
   const { t, language, setLanguage, currentLangObj } = useLanguage();
   const currentLanguage = propCurrentLanguage || language;
   const onSelectLanguage = propOnSelectLanguage || setLanguage;
+
+  // All available states, and a helper to get districts for a given state
+  const ALL_STATE_NAMES = INDIAN_LOCATIONS.map((l) => l.state);
+  const getDistrictsForState = (stateName) =>
+    INDIAN_LOCATIONS.find((l) => l.state === stateName)?.districts.map((d) => d.name) || [];
 
   const [isLangOpen, setIsLangOpen] = useState(false);
 
@@ -80,6 +86,14 @@ export default function Landing({
     }
     if (!farmerForm.password || farmerForm.password.length < 4) {
       errors.password = 'Password must be at least 4 characters';
+    }
+    if (authMode === 'register') {
+      if (!farmerForm.state) {
+        errors.state = 'Please select your state';
+      }
+      if (!farmerForm.district) {
+        errors.district = 'Please select your district';
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -153,6 +167,14 @@ export default function Landing({
     }
     if (!buyerForm.password || buyerForm.password.length < 4) {
       errors.password = 'Password must be at least 4 characters';
+    }
+    if (authMode === 'register') {
+      if (!buyerForm.state) {
+        errors.state = 'Please select your state';
+      }
+      if (!buyerForm.district) {
+        errors.district = 'Please select your city / district';
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -400,16 +422,16 @@ export default function Landing({
                     <label className="form-label" style={{ fontWeight: 700 }}>
                       {t('landing.fullName', 'Farmer Name')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="input-icon-group">
                       <input
                         type="text"
-                        className={`form-input ${farmerErrors.name ? 'error' : ''}`}
+                        className={`form-control ${farmerErrors.name ? 'error' : ''}`}
                         placeholder="Enter your name"
                         value={farmerForm.name}
                         onChange={(e) => setFarmerForm({ ...farmerForm, name: e.target.value })}
                         style={{ paddingLeft: 36 }}
                       />
-                      <User size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--neutral-400)' }} />
+                      <User size={16} className="input-icon-left" />
                     </div>
                     {farmerErrors.name && (
                       <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -423,17 +445,17 @@ export default function Landing({
                     <label className="form-label" style={{ fontWeight: 700 }}>
                       {t('landing.mobileNumber', 'Mobile Number')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="input-icon-group">
                       <input
                         type="tel"
                         maxLength={10}
-                        className={`form-input ${farmerErrors.mobile ? 'error' : ''}`}
+                        className={`form-control ${farmerErrors.mobile ? 'error' : ''}`}
                         placeholder="10-digit mobile number"
                         value={farmerForm.mobile}
                         onChange={(e) => setFarmerForm({ ...farmerForm, mobile: e.target.value })}
                         style={{ paddingLeft: 36 }}
                       />
-                      <Phone size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--neutral-400)' }} />
+                      <Phone size={16} className="input-icon-left" />
                     </div>
                     {farmerErrors.mobile && (
                       <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -445,24 +467,45 @@ export default function Landing({
                   {authMode === 'register' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('landing.district', 'District')}</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={farmerForm.district}
-                          onChange={(e) => setFarmerForm({ ...farmerForm, district: e.target.value })}
-                          placeholder="e.g. Nashik"
-                        />
+                        <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                          {t('landing.state', 'State')} <span style={{ color: '#dc2626' }}>*</span>
+                        </label>
+                        <select
+                          className={`form-control ${farmerErrors.state ? 'error' : ''}`}
+                          value={farmerForm.state}
+                          onChange={(e) => setFarmerForm({ ...farmerForm, state: e.target.value, district: '' })}
+                        >
+                          <option value="">Select state</option>
+                          {ALL_STATE_NAMES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        {farmerErrors.state && (
+                          <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <AlertCircle size={12} /> {farmerErrors.state}
+                          </span>
+                        )}
                       </div>
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('landing.state', 'State')}</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={farmerForm.state}
-                          onChange={(e) => setFarmerForm({ ...farmerForm, state: e.target.value })}
-                          placeholder="e.g. Maharashtra"
-                        />
+                        <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                          {t('landing.district', 'District')} <span style={{ color: '#dc2626' }}>*</span>
+                        </label>
+                        <select
+                          className={`form-control ${farmerErrors.district ? 'error' : ''}`}
+                          value={farmerForm.district}
+                          onChange={(e) => setFarmerForm({ ...farmerForm, district: e.target.value })}
+                          disabled={!farmerForm.state}
+                        >
+                          <option value="">{farmerForm.state ? 'Select district' : 'Select state first'}</option>
+                          {getDistrictsForState(farmerForm.state).map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                        {farmerErrors.district && (
+                          <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <AlertCircle size={12} /> {farmerErrors.district}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -472,20 +515,20 @@ export default function Landing({
                     <label className="form-label" style={{ fontWeight: 700 }}>
                       {t('landing.password', 'Password')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="input-icon-group">
                       <input
                         type={showFarmerPassword ? 'text' : 'password'}
-                        className={`form-input ${farmerErrors.password ? 'error' : ''}`}
+                        className={`form-control ${farmerErrors.password ? 'error' : ''}`}
                         placeholder="Enter password"
                         value={farmerForm.password}
                         onChange={(e) => setFarmerForm({ ...farmerForm, password: e.target.value })}
                         style={{ paddingLeft: 36, paddingRight: 36 }}
                       />
-                      <Lock size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--neutral-400)' }} />
+                      <Lock size={16} className="input-icon-left" />
                       <button
                         type="button"
                         onClick={() => setShowFarmerPassword(!showFarmerPassword)}
-                        style={{ position: 'absolute', right: 12, top: 10, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--neutral-400)' }}
+                        className="input-icon-toggle"
                       >
                         {showFarmerPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -590,16 +633,16 @@ export default function Landing({
                     <label className="form-label" style={{ fontWeight: 700 }}>
                       {t('landing.orgName', 'Name / Organization')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="input-icon-group">
                       <input
                         type="text"
-                        className={`form-input ${buyerErrors.name ? 'error' : ''}`}
+                        className={`form-control ${buyerErrors.name ? 'error' : ''}`}
                         placeholder="Enter organization or buyer name"
                         value={buyerForm.name}
                         onChange={(e) => setBuyerForm({ ...buyerForm, name: e.target.value })}
                         style={{ paddingLeft: 36 }}
                       />
-                      <Building2 size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--neutral-400)' }} />
+                      <Building2 size={16} className="input-icon-left" />
                     </div>
                     {buyerErrors.name && (
                       <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -613,16 +656,16 @@ export default function Landing({
                     <label className="form-label" style={{ fontWeight: 700 }}>
                       {t('landing.emailOrMobile', 'Email or Mobile Number')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="input-icon-group">
                       <input
                         type="text"
-                        className={`form-input ${buyerErrors.identifier ? 'error' : ''}`}
+                        className={`form-control ${buyerErrors.identifier ? 'error' : ''}`}
                         placeholder="e.g. procurement@freshmart.in or 9820012345"
                         value={buyerForm.identifier}
                         onChange={(e) => setBuyerForm({ ...buyerForm, identifier: e.target.value })}
                         style={{ paddingLeft: 36 }}
                       />
-                      <Mail size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--neutral-400)' }} />
+                      <Mail size={16} className="input-icon-left" />
                     </div>
                     {buyerErrors.identifier && (
                       <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -632,28 +675,61 @@ export default function Landing({
                   </div>
 
                   {authMode === 'register' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <>
                       <div className="form-group" style={{ margin: 0 }}>
                         <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('landing.businessType', 'Business Type')}</label>
                         <input
                           type="text"
-                          className="form-input"
+                          className="form-control"
                           value={buyerForm.businessType}
                           onChange={(e) => setBuyerForm({ ...buyerForm, businessType: e.target.value })}
                           placeholder="e.g. Supermarket Chain"
                         />
                       </div>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('landing.cityDistrict', 'City / District')}</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={buyerForm.district}
-                          onChange={(e) => setBuyerForm({ ...buyerForm, district: e.target.value })}
-                          placeholder="e.g. Pune"
-                        />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                            {t('landing.state', 'State')} <span style={{ color: '#dc2626' }}>*</span>
+                          </label>
+                          <select
+                            className={`form-control ${buyerErrors.state ? 'error' : ''}`}
+                            value={buyerForm.state}
+                            onChange={(e) => setBuyerForm({ ...buyerForm, state: e.target.value, district: '' })}
+                          >
+                            <option value="">Select state</option>
+                            {ALL_STATE_NAMES.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                          {buyerErrors.state && (
+                            <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <AlertCircle size={12} /> {buyerErrors.state}
+                            </span>
+                          )}
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                            {t('landing.cityDistrict', 'City / District')} <span style={{ color: '#dc2626' }}>*</span>
+                          </label>
+                          <select
+                            className={`form-control ${buyerErrors.district ? 'error' : ''}`}
+                            value={buyerForm.district}
+                            onChange={(e) => setBuyerForm({ ...buyerForm, district: e.target.value })}
+                            disabled={!buyerForm.state}
+                          >
+                            <option value="">{buyerForm.state ? 'Select district' : 'Select state first'}</option>
+                            {getDistrictsForState(buyerForm.state).map((d) => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                          {buyerErrors.district && (
+                            <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <AlertCircle size={12} /> {buyerErrors.district}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
 
                   {/* Password */}
@@ -661,20 +737,20 @@ export default function Landing({
                     <label className="form-label" style={{ fontWeight: 700 }}>
                       {t('landing.password', 'Password')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="input-icon-group">
                       <input
                         type={showBuyerPassword ? 'text' : 'password'}
-                        className={`form-input ${buyerErrors.password ? 'error' : ''}`}
+                        className={`form-control ${buyerErrors.password ? 'error' : ''}`}
                         placeholder="Enter password"
                         value={buyerForm.password}
                         onChange={(e) => setBuyerForm({ ...buyerForm, password: e.target.value })}
                         style={{ paddingLeft: 36, paddingRight: 36 }}
                       />
-                      <Lock size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--neutral-400)' }} />
+                      <Lock size={16} className="input-icon-left" />
                       <button
                         type="button"
                         onClick={() => setShowBuyerPassword(!showBuyerPassword)}
-                        style={{ position: 'absolute', right: 12, top: 10, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--neutral-400)' }}
+                        className="input-icon-toggle"
                       >
                         {showBuyerPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>

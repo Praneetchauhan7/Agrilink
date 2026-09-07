@@ -602,57 +602,6 @@ export default function Profile({
                   </div>
                 </div>
               </div>
-
-              {/* Verification & Compliance */}
-              <div className="card">
-                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 14 }}>
-                  {t('profile.kycStatus', 'Compliance & Verification Badges')}
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div style={{ background: 'var(--neutral-50)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--neutral-200)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '0.88rem' }}>
-                      <CheckCircle2 size={16} style={{ color: 'var(--neutral-400)' }} />
-                      {isFarmer ? t('profile.aadhaarKyc', 'Aadhaar e-KYC') : t('profile.gstin', 'Corporate GSTIN')}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--neutral-500)', marginTop: 4 }}>
-                      {t('profile.pendingKyc', 'Pending verification • Provide details during contract execution')}
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--neutral-50)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--neutral-200)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '0.88rem' }}>
-                      <CheckCircle2 size={16} style={{ color: 'var(--neutral-400)' }} />
-                      {isFarmer ? t('profile.landTitle', '7/12 Land Title Record') : t('profile.fssaiLicense', 'FSSAI License')}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--neutral-500)', marginTop: 4 }}>
-                      {t('profile.pendingDoc', 'Not linked • Upload record during order settlement')}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Escrow Direct Settlement Banking */}
-              <div className="card">
-                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 14 }}>
-                  {isFarmer ? t('profile.directBankSettlement', 'Direct Bank Settlement (Escrow Release)') : t('profile.escrowFundingWallet', 'Escrow Funding Wallet')}
-                </h4>
-
-                <div style={{ background: 'var(--primary-50)', border: '1px solid var(--primary-200)', borderRadius: 'var(--radius-md)', padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--primary-900)', fontWeight: 700 }}>
-                      {isFarmer ? t('profile.bankAccount', 'Bank Account for Escrow Payouts') : t('profile.escrowFundingWallet', 'Escrow Funding Wallet')}
-                    </span>
-                    <span className="badge badge-secondary">{t('profile.setupPending', 'Setup on first order')}</span>
-                  </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--neutral-700)', marginTop: 4 }}>
-                    {isFarmer ? t('profile.noBankYet', 'No bank account linked yet') : t('profile.zeroWallet', 'Current Balance: ₹0 (Funded per order)')}
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--primary-800)', marginTop: 4 }}>
-                    {t('profile.instantCreditDesc', 'Direct settlement via verified escrow upon electronic Proof-of-Delivery (e-POD).')}
-                  </div>
-                </div>
-              </div>
             </>
           )}
         </div>
