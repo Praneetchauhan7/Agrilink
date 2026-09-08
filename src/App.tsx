@@ -29,6 +29,23 @@ import Profile from './pages/Profile';
 import NotificationsPage from './pages/NotificationsPage';
 import CartModal from './components/CartModal';
 
+// Every protected API route now requires a real Authorization header - this
+// wrapper attaches the logged-in user's JWT (from localStorage) to every
+// request automatically, so individual call sites don't each have to
+// remember to do it. Falls back to a plain, unauthenticated fetch if
+// there's no token (e.g. login/register calls, or public read-only routes).
+async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const token = localStorage.getItem('agrilink_token');
+  if (!token) {
+    return fetch(input, init);
+  }
+  const headers = new Headers(init.headers || {});
+  if (!headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  return fetch(input, { ...init, headers });
+}
+
 export default function App() {
   // Authenticated User State from active session/localStorage
   const [currentUser, setCurrentUser] = useState(() => {
@@ -112,7 +129,7 @@ export default function App() {
   const loadDatabaseData = async () => {
     try {
       // 1. Fetch Produce Listings from SQLite
-      const produceRes = await fetch('/api/produce');
+      const produceRes = await authFetch('/api/produce');
       if (produceRes.ok) {
         const produceJson = await produceRes.json();
         const rawListings = produceJson.listings || [];
@@ -146,7 +163,7 @@ export default function App() {
       }
 
       // 2. Fetch Buyer Demands from SQLite
-      const demandsRes = await fetch('/api/buyer-demands');
+      const demandsRes = await authFetch('/api/buyer-demands');
       if (demandsRes.ok) {
         const demandsJson = await demandsRes.json();
         const rawDemands = demandsJson.demands || [];
@@ -188,7 +205,7 @@ export default function App() {
       }
 
       // 3. Fetch Offers from SQLite
-      const offersRes = await fetch('/api/offers');
+      const offersRes = await authFetch('/api/offers');
       if (offersRes.ok) {
         const offersJson = await offersRes.json();
         const rawOffers = offersJson.offers || [];
@@ -224,14 +241,14 @@ export default function App() {
       }
 
       // 4. Fetch Transactions from PostgreSQL
-      const txRes = await fetch('/api/transactions');
+      const txRes = await authFetch('/api/transactions');
       if (txRes.ok) {
         const txJson = await txRes.json();
         setTransactions(txJson.transactions || []);
       }
 
       // 5. Fetch Notifications from PostgreSQL
-      const notifRes = await fetch('/api/notifications');
+      const notifRes = await authFetch('/api/notifications');
       if (notifRes.ok) {
         const notifJson = await notifRes.json();
         const rawNotifs = notifJson.notifications || [];
@@ -252,7 +269,7 @@ export default function App() {
       }
 
       // 6. Fetch Orders from Database
-      const ordersRes = await fetch('/api/orders');
+      const ordersRes = await authFetch('/api/orders');
       if (ordersRes.ok) {
         const ordersJson = await ordersRes.json();
         const rawOrders = ordersJson.orders || [];
@@ -307,7 +324,7 @@ export default function App() {
       }
 
       // 5. Fetch Logistics from SQLite
-      const logRes = await fetch('/api/logistics');
+      const logRes = await authFetch('/api/logistics');
       if (logRes.ok) {
         const logJson = await logRes.json();
         const records = logJson.logistics || [];
@@ -322,7 +339,7 @@ export default function App() {
 
       // 6. Fetch Cart from PostgreSQL
       const buyerId = currentUser?.id || (currentRole === 'buyer' ? 'buyer-1' : 'farmer-1');
-      const cartRes = await fetch(`/api/cart?buyerId=${buyerId}`);
+      const cartRes = await authFetch(`/api/cart?buyerId=${buyerId}`);
       if (cartRes.ok) {
         const cartJson = await cartRes.json();
         if (cartJson.success) {
@@ -338,7 +355,7 @@ export default function App() {
   const fetchCart = async () => {
     try {
       const buyerId = currentUser?.id || (currentRole === 'buyer' ? 'buyer-1' : 'farmer-1');
-      const res = await fetch(`/api/cart?buyerId=${buyerId}`);
+      const res = await authFetch(`/api/cart?buyerId=${buyerId}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -356,7 +373,7 @@ export default function App() {
       const buyerId = currentUser?.id || (currentRole === 'buyer' ? 'buyer-1' : 'farmer-1');
       const qty = customQty || Number(farmer.quantity || farmer.currentStockKg) || 100;
       const unitPrice = Number(farmer.expectedPrice || farmer.expected_price || farmer.unitPrice) || 2800;
-      const res = await fetch('/api/cart', {
+      const res = await authFetch('/api/cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -393,7 +410,7 @@ export default function App() {
 
   const handleUpdateCartQuantity = async (itemId: string, newQuantity: number) => {
     try {
-      const res = await fetch(`/api/cart/${itemId}`, {
+      const res = await authFetch(`/api/cart/${itemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: newQuantity }),
@@ -408,7 +425,7 @@ export default function App() {
 
   const handleRemoveCartItem = async (itemId: string) => {
     try {
-      const res = await fetch(`/api/cart/${itemId}`, {
+      const res = await authFetch(`/api/cart/${itemId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -423,7 +440,7 @@ export default function App() {
     setIsPlacingCartOrder(true);
     try {
       const buyerId = currentUser?.id || (currentRole === 'buyer' ? 'buyer-1' : 'farmer-1');
-      const res = await fetch('/api/cart/checkout', {
+      const res = await authFetch('/api/cart/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ buyerId }),
@@ -631,7 +648,7 @@ export default function App() {
     if (notif.id) {
       try {
         const recipientId = currentUser?.id || (currentRole === 'buyer' ? 'buyer-1' : 'farmer-1');
-        await fetch(`/api/notifications/${notif.id}/read`, {
+        await authFetch(`/api/notifications/${notif.id}/read`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ recipientId }),
@@ -723,7 +740,7 @@ export default function App() {
   // Farmer Handlers (Persisted to SQLite)
   const handleAddProduce = async (newProduce) => {
     try {
-      const response = await fetch('/api/produce', {
+      const response = await authFetch('/api/produce', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -754,7 +771,7 @@ export default function App() {
 
   const handleEditProduce = async (updated) => {
     try {
-      await fetch(`/api/produce/${updated.id}`, {
+      await authFetch(`/api/produce/${updated.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -776,7 +793,7 @@ export default function App() {
 
   const handleDeleteProduce = async (id) => {
     try {
-      await fetch(`/api/produce/${id}?farmerId=${currentUser.id || 'farmer-1'}`, {
+      await authFetch(`/api/produce/${id}?farmerId=${currentUser.id || 'farmer-1'}`, {
         method: 'DELETE',
       });
       loadDatabaseData();
@@ -789,7 +806,7 @@ export default function App() {
 
   const handleFarmerSubmitOffer = async (newOffer) => {
     try {
-      await fetch('/api/offers', {
+      await authFetch('/api/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -823,7 +840,7 @@ export default function App() {
     const offer = typeof offerOrId === 'object' ? offerOrId : offers.find((o: any) => o.id === offerOrId);
     const offerId = offer?.id || offerOrId;
     try {
-      const res = await fetch(`/api/offers/${offerId}/accept`, {
+      const res = await authFetch(`/api/offers/${offerId}/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -846,7 +863,7 @@ export default function App() {
 
   const handleRejectOffer = async (offerId: string) => {
     try {
-      const res = await fetch(`/api/offers/${offerId}/reject`, {
+      const res = await authFetch(`/api/offers/${offerId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -873,7 +890,7 @@ export default function App() {
       const quantity = typeof counterData === 'object' ? counterData.quantity || counterData.counterQuantity : undefined;
       const message = typeof counterData === 'object' ? counterData.message || counterData.notes : undefined;
 
-      const res = await fetch(`/api/offers/${offerId}/counter`, {
+      const res = await authFetch(`/api/offers/${offerId}/counter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -900,7 +917,7 @@ export default function App() {
   // Update 5-Stage Contract Transaction Status
   const handleUpdateTransactionStatus = async (transactionId: string, newStatus: string) => {
     try {
-      const res = await fetch(`/api/transactions/${transactionId}/status`, {
+      const res = await authFetch(`/api/transactions/${transactionId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -943,7 +960,7 @@ export default function App() {
     };
 
     try {
-      await fetch('/api/orders', {
+      await authFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -967,7 +984,7 @@ export default function App() {
   };
 
   const handleSaveOrderLogistics = async (orderId, locations) => {
-    const response = await fetch('/api/logistics', {
+    const response = await authFetch('/api/logistics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1013,8 +1030,8 @@ export default function App() {
             'info'
           );
 
-          // Update SQLite order status
-          fetch(`/api/orders/${orderId}`, {
+          // Update order status
+          authFetch(`/api/orders/${orderId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus.toLowerCase().replace(/\s+/g, '_') }),
@@ -1035,7 +1052,7 @@ export default function App() {
     setNotifications((prev) => prev.map((n: any) => ({ ...n, unread: false })));
     try {
       const recipientId = currentUser?.id || (currentRole === 'buyer' ? 'buyer-1' : 'farmer-1');
-      await fetch('/api/notifications/mark-all-read', {
+      await authFetch('/api/notifications/mark-all-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipientId }),

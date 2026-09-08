@@ -754,19 +754,13 @@ function verifyAuthToken(req: express.Request): { id: string; role: string; name
   }
 }
 
-// Optional / Required Auth Middleware
+// Required Auth Middleware - verifies a real JWT. No fallback headers/query
+// params are accepted for identity: those were a spoofable impersonation
+// bypass (anyone could act as any user by just sending their ID) and have
+// been removed. A valid Authorization: Bearer <token> is required.
 async function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const user = verifyAuthToken(req);
   if (!user) {
-    // If not bearer token, allow mock header for seamless fallback if passed in client
-    const fallbackId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
-    if (fallbackId) {
-      const dbUser = await findUserById(fallbackId);
-      if (dbUser) {
-        (req as any).user = dbUser;
-        return next();
-      }
-    }
     return res.status(401).json({ success: false, message: "Authentication required" });
   }
   (req as any).user = user;
@@ -935,14 +929,9 @@ app.get("/api/auth/me", async (req, res) => {
   });
 });
 
-app.put("/api/auth/profile", async (req, res) => {
+app.put("/api/auth/profile", requireAuth, async (req, res) => {
   try {
-    const authUser = verifyAuthToken(req);
-    const userId = authUser?.id || req.body.id || req.body.userId;
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized or missing user ID" });
-    }
-
+    const userId = (req as any).user.id;
     const user = await findUserById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found in database" });
@@ -1009,7 +998,10 @@ app.put("/api/auth/profile", async (req, res) => {
 // ----------------------------------------------------
 // USERS API
 // ----------------------------------------------------
-app.get("/api/users/:id", async (req, res) => {
+app.get("/api/users/:id", requireAuth, async (req, res) => {
+  if ((req as any).user.id !== req.params.id) {
+    return res.status(403).json({ success: false, message: "You can only view your own account." });
+  }
   const user = await findUserById(req.params.id);
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -1018,8 +1010,11 @@ app.get("/api/users/:id", async (req, res) => {
   return res.json({ success: true, user: { ...user, profile } });
 });
 
-app.put("/api/users/:id", async (req, res) => {
+app.put("/api/users/:id", requireAuth, async (req, res) => {
   try {
+    if ((req as any).user.id !== req.params.id) {
+      return res.status(403).json({ success: false, message: "You can only update your own account." });
+    }
     const updated = await updateUser(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -1081,11 +1076,13 @@ app.get("/api/produce/:id", async (req, res) => {
   return res.json({ success: true, listing });
 });
 
-app.post("/api/produce", async (req, res) => {
+app.post("/api/produce", requireAuth, async (req, res) => {
   try {
+    const actor = (req as any).user;
+    if (actor.role !== "farmer") {
+      return res.status(403).json({ success: false, message: "Only farmer accounts can publish produce listings." });
+    }
     const {
-      farmer_id,
-      farmerId,
       crop_name,
       produce,
       variety,
@@ -1107,7 +1104,7 @@ app.post("/api/produce", async (req, res) => {
       market,
     } = req.body;
 
-    const fId = farmer_id || farmerId;
+    const fId = actor.id;
     const crop = crop_name || produce;
     const price = expected_price || expectedPrice;
 
@@ -1153,17 +1150,12 @@ app.post("/api/produce", async (req, res) => {
   }
 });
 
-app.put("/api/produce/:id", async (req, res) => {
+app.put("/api/produce/:id", requireAuth, async (req, res) => {
   try {
-    const { farmer_id, farmerId } = req.body;
-    const fId = farmer_id || farmerId;
-    if (!fId) {
-      return res.status(400).json({ success: false, message: "Farmer ID is required for verification" });
-    }
-
+    const fId = (req as any).user.id;
     const updated = await updateProduceListing(req.params.id, fId, req.body);
     if (!updated) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res.status(404).json({ success: false, message: "Listing not found, or you don't own this listing" });
     }
     return res.json({ success: true, message: "Listing updated successfully", listing: updated });
   } catch (error: any) {
@@ -1172,12 +1164,9 @@ app.put("/api/produce/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/produce/:id", async (req, res) => {
+app.delete("/api/produce/:id", requireAuth, async (req, res) => {
   try {
-    const farmerId = (req.query.farmerId as string) || req.body.farmerId || req.body.farmer_id;
-    if (!farmerId) {
-      return res.status(400).json({ success: false, message: "Farmer ID is required" });
-    }
+    const farmerId = (req as any).user.id;
     const success = await deleteProduceListing(req.params.id, farmerId);
     if (!success) {
       return res.status(404).json({ success: false, message: "Listing not found or unauthorized" });
@@ -1215,11 +1204,13 @@ app.get("/api/buyer-demands/:id", async (req, res) => {
   return res.json({ success: true, demand });
 });
 
-app.post("/api/buyer-demands", async (req, res) => {
+app.post("/api/buyer-demands", requireAuth, async (req, res) => {
   try {
+    const actor = (req as any).user;
+    if (actor.role !== "buyer") {
+      return res.status(403).json({ success: false, message: "Only buyer accounts can post procurement requirements." });
+    }
     const {
-      buyer_id,
-      buyerId,
       crop_name,
       produce,
       variety,
@@ -1240,7 +1231,7 @@ app.post("/api/buyer-demands", async (req, res) => {
       description,
     } = req.body;
 
-    const bId = buyer_id || buyerId;
+    const bId = actor.id;
     const crop = crop_name || produce;
     const reqQty = required_quantity || quantity;
     const tPrice = target_price || targetPrice;
@@ -1285,16 +1276,12 @@ app.post("/api/buyer-demands", async (req, res) => {
   }
 });
 
-app.put("/api/buyer-demands/:id", async (req, res) => {
+app.put("/api/buyer-demands/:id", requireAuth, async (req, res) => {
   try {
-    const { buyer_id, buyerId } = req.body;
-    const bId = buyer_id || buyerId;
-    if (!bId) {
-      return res.status(400).json({ success: false, message: "Buyer ID is required" });
-    }
+    const bId = (req as any).user.id;
     const updated = await updateBuyerDemand(req.params.id, bId, req.body);
     if (!updated) {
-      return res.status(404).json({ success: false, message: "Buyer demand not found" });
+      return res.status(404).json({ success: false, message: "Buyer demand not found, or you don't own it" });
     }
     return res.json({ success: true, message: "Demand updated successfully", demand: updated });
   } catch (error: any) {
@@ -1302,12 +1289,9 @@ app.put("/api/buyer-demands/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/buyer-demands/:id", async (req, res) => {
+app.delete("/api/buyer-demands/:id", requireAuth, async (req, res) => {
   try {
-    const buyerId = (req.query.buyerId as string) || req.body.buyerId || req.body.buyer_id;
-    if (!buyerId) {
-      return res.status(400).json({ success: false, message: "Buyer ID is required" });
-    }
+    const buyerId = (req as any).user.id;
     const success = await deleteBuyerDemand(req.params.id, buyerId);
     if (!success) {
       return res.status(404).json({ success: false, message: "Demand not found or unauthorized" });
@@ -1321,12 +1305,15 @@ app.delete("/api/buyer-demands/:id", async (req, res) => {
 // ----------------------------------------------------
 // 6. API: OFFERS & NEGOTIATION (Bids, Counters, Acceptance)
 // ----------------------------------------------------
-app.get("/api/offers", async (req, res) => {
+app.get("/api/offers", requireAuth, async (req, res) => {
   try {
-    const { buyerId, farmerId, listingId, status, originalOfferId } = req.query;
+    const actor = (req as any).user;
+    const { listingId, status, originalOfferId } = req.query;
+    // Always scope to the authenticated user - never trust a client-supplied
+    // buyerId/farmerId, or any user could browse anyone else's negotiations.
     const offers = await getOffers({
-      buyerId: buyerId as string,
-      farmerId: farmerId as string,
+      buyerId: actor.role === "buyer" ? actor.id : undefined,
+      farmerId: actor.role === "farmer" ? actor.id : undefined,
       listingId: listingId as string,
       status: status as string,
       originalOfferId: originalOfferId as string,
@@ -1338,17 +1325,31 @@ app.get("/api/offers", async (req, res) => {
   }
 });
 
-app.get("/api/offers/:id", async (req, res) => {
+app.get("/api/offers/:id", requireAuth, async (req, res) => {
   const offer = await getOfferById(req.params.id);
   if (!offer) {
     return res.status(404).json({ success: false, message: "Offer not found" });
+  }
+  const actor = (req as any).user;
+  const farmerId = (offer as any).farmer_id || (offer as any).listing_farmer_id;
+  if (actor.id !== offer.buyer_id && actor.id !== farmerId) {
+    return res.status(403).json({ success: false, message: "You are not a party to this offer." });
   }
   const history = await getOfferNegotiationHistory(offer.id);
   return res.json({ success: true, offer, history });
 });
 
-app.get("/api/offers/:id/history", async (req, res) => {
+app.get("/api/offers/:id/history", requireAuth, async (req, res) => {
   try {
+    const offer = await getOfferById(req.params.id);
+    if (!offer) {
+      return res.status(404).json({ success: false, message: "Offer not found" });
+    }
+    const actor = (req as any).user;
+    const farmerId = (offer as any).farmer_id || (offer as any).listing_farmer_id;
+    if (actor.id !== offer.buyer_id && actor.id !== farmerId) {
+      return res.status(403).json({ success: false, message: "You are not a party to this offer." });
+    }
     const history = await getOfferNegotiationHistory(req.params.id);
     return res.json({ success: true, count: history.length, history });
   } catch (error: any) {
@@ -1356,19 +1357,20 @@ app.get("/api/offers/:id/history", async (req, res) => {
   }
 });
 
-app.post("/api/offers", async (req, res) => {
+app.post("/api/offers", requireAuth, async (req, res) => {
   try {
-    const { listing_id, listingId, buyer_id, buyerId, offered_price, offeredPrice, quantity, quantity_unit, message } = req.body;
+    const actor = (req as any).user;
+    if (actor.role !== "buyer") {
+      return res.status(403).json({ success: false, message: "Only buyer accounts can make offers on listings." });
+    }
+    const { listing_id, listingId, offered_price, offeredPrice, quantity, quantity_unit, message } = req.body;
 
     const listId = listing_id || listingId;
-    const bId = buyer_id || buyerId;
+    const bId = actor.id;
     const price = offered_price || offeredPrice;
 
     if (!listId) {
       return res.status(400).json({ success: false, message: "Listing ID is required" });
-    }
-    if (!bId) {
-      return res.status(400).json({ success: false, message: "Buyer ID is required" });
     }
     if (!price || isNaN(Number(price)) || Number(price) <= 0) {
       return res.status(400).json({ success: false, message: "A valid positive offered price is required" });
@@ -1398,23 +1400,19 @@ app.post("/api/offers", async (req, res) => {
 });
 
 // Counter-Offer endpoint
-app.post("/api/offers/:id/counter", async (req, res) => {
+app.post("/api/offers/:id/counter", requireAuth, async (req, res) => {
   try {
+    const actor = (req as any).user;
     const { 
-      actor_id, actorId, 
-      actor_role, actorRole, 
       offered_price, offeredPrice, counter_price, counterPrice,
       quantity, counter_quantity, counterQuantity,
       quantity_unit, message 
     } = req.body;
-    const userActorId = actor_id || actorId;
-    const userActorRole = actor_role || actorRole;
+    const userActorId = actor.id;
+    const userActorRole = actor.role;
     const price = counter_price ?? counterPrice ?? offered_price ?? offeredPrice;
 
-    if (!userActorId) {
-      return res.status(400).json({ success: false, message: "Actor ID is required" });
-    }
-    if (!userActorRole || !["farmer", "buyer"].includes(userActorRole)) {
+    if (!["farmer", "buyer"].includes(userActorRole)) {
       return res.status(400).json({ success: false, message: "Actor role must be 'farmer' or 'buyer'" });
     }
     if (!price || isNaN(Number(price)) || Number(price) <= 0) {
@@ -1455,13 +1453,9 @@ app.post("/api/offers/:id/counter", async (req, res) => {
 });
 
 // Explicit Accept endpoint
-app.post("/api/offers/:id/accept", async (req, res) => {
+app.post("/api/offers/:id/accept", requireAuth, async (req, res) => {
   try {
-    const { actor_id, actorId } = req.body;
-    const userActorId = actor_id || actorId;
-    if (!userActorId) {
-      return res.status(400).json({ success: false, message: "Actor ID is required for verification" });
-    }
+    const userActorId = (req as any).user.id;
     const result = await updateOfferStatus(req.params.id, "Accepted", userActorId);
     return res.json({
       success: true,
@@ -1477,13 +1471,9 @@ app.post("/api/offers/:id/accept", async (req, res) => {
 });
 
 // Explicit Reject endpoint
-app.post("/api/offers/:id/reject", async (req, res) => {
+app.post("/api/offers/:id/reject", requireAuth, async (req, res) => {
   try {
-    const { actor_id, actorId } = req.body;
-    const userActorId = actor_id || actorId;
-    if (!userActorId) {
-      return res.status(400).json({ success: false, message: "Actor ID is required for verification" });
-    }
+    const userActorId = (req as any).user.id;
     const result = await updateOfferStatus(req.params.id, "Rejected", userActorId);
     return res.json({
       success: true,
@@ -1496,16 +1486,13 @@ app.post("/api/offers/:id/reject", async (req, res) => {
   }
 });
 
-app.put("/api/offers/:id", async (req, res) => {
+app.put("/api/offers/:id", requireAuth, async (req, res) => {
   try {
-    const { status, actor_id, actorId } = req.body;
-    const userActorId = actor_id || actorId;
+    const { status } = req.body;
+    const userActorId = (req as any).user.id;
 
     if (!status) {
       return res.status(400).json({ success: false, message: "Status is required ('Accepted', 'Rejected', 'Countered')" });
-    }
-    if (!userActorId) {
-      return res.status(400).json({ success: false, message: "Actor ID is required for verification" });
     }
 
     const result = await updateOfferStatus(req.params.id, status, userActorId);
@@ -1526,12 +1513,13 @@ app.put("/api/offers/:id", async (req, res) => {
 // 7. API: TRANSACTIONS (5-Stage Farmer-Buyer State Flow)
 // Accepted -> Payment Pending -> Payment Completed -> Delivery/Pickup -> Completed
 // ----------------------------------------------------
-app.get("/api/transactions", async (req, res) => {
+app.get("/api/transactions", requireAuth, async (req, res) => {
   try {
-    const { farmerId, buyerId, status } = req.query;
+    const actor = (req as any).user;
+    const { status } = req.query;
     const transactions = await getTransactions({
-      farmerId: farmerId as string,
-      buyerId: buyerId as string,
+      farmerId: actor.role === "farmer" ? actor.id : undefined,
+      buyerId: actor.role === "buyer" ? actor.id : undefined,
       status: status as string,
     });
     return res.json({ success: true, count: transactions.length, transactions });
@@ -1541,11 +1529,15 @@ app.get("/api/transactions", async (req, res) => {
   }
 });
 
-app.get("/api/transactions/:id", async (req, res) => {
+app.get("/api/transactions/:id", requireAuth, async (req, res) => {
   try {
     const transaction = await getTransactionById(req.params.id);
     if (!transaction) {
       return res.status(404).json({ success: false, message: "Transaction not found" });
+    }
+    const actor = (req as any).user;
+    if (actor.id !== transaction.farmer_id && actor.id !== transaction.buyer_id) {
+      return res.status(403).json({ success: false, message: "You are not a party to this transaction." });
     }
     return res.json({ success: true, transaction });
   } catch (error: any) {
@@ -1555,8 +1547,8 @@ app.get("/api/transactions/:id", async (req, res) => {
 
 const handleUpdateTransactionStatus = async (req: express.Request, res: express.Response) => {
   try {
-    const { status, actor_id, actorId } = req.body;
-    const userActorId = actor_id || actorId;
+    const { status } = req.body;
+    const userActorId = (req as any).user.id;
 
     if (!status) {
       return res.status(400).json({ success: false, message: "New status is required" });
@@ -1574,15 +1566,15 @@ const handleUpdateTransactionStatus = async (req: express.Request, res: express.
   }
 };
 
-app.put("/api/transactions/:id/status", handleUpdateTransactionStatus);
-app.patch("/api/transactions/:id/status", handleUpdateTransactionStatus);
+app.put("/api/transactions/:id/status", requireAuth, handleUpdateTransactionStatus);
+app.patch("/api/transactions/:id/status", requireAuth, handleUpdateTransactionStatus);
 
 // ----------------------------------------------------
 // 8. API: PERSISTENT NOTIFICATIONS
 // ----------------------------------------------------
-app.get("/api/notifications", async (req, res) => {
+app.get("/api/notifications", requireAuth, async (req, res) => {
   try {
-    const recipientId = (req.query.recipientId as string) || (req.query.userId as string);
+    const recipientId = (req as any).user.id;
     const notifications = await getNotifications(recipientId);
     const unreadCount = await getUnreadNotificationCount(recipientId);
     return res.json({ success: true, unreadCount, count: notifications.length, notifications });
@@ -1592,12 +1584,9 @@ app.get("/api/notifications", async (req, res) => {
   }
 });
 
-app.patch("/api/notifications/:id/read", async (req, res) => {
+app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
   try {
-    const recipientId = (req.body.recipientId as string) || (req.query.recipientId as string) || (req.body.userId as string);
-    if (!recipientId) {
-      return res.status(400).json({ success: false, message: "Recipient ID is required" });
-    }
+    const recipientId = (req as any).user.id;
     await markNotificationAsRead(req.params.id, recipientId);
     return res.json({ success: true, message: "Notification marked as read" });
   } catch (error: any) {
@@ -1605,12 +1594,9 @@ app.patch("/api/notifications/:id/read", async (req, res) => {
   }
 });
 
-app.post("/api/notifications/mark-all-read", async (req, res) => {
+app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
   try {
-    const recipientId = (req.body.recipientId as string) || (req.body.userId as string);
-    if (!recipientId) {
-      return res.status(400).json({ success: false, message: "Recipient ID is required" });
-    }
+    const recipientId = (req as any).user.id;
     await markAllNotificationsAsRead(recipientId);
     return res.json({ success: true, message: "All notifications marked as read" });
   } catch (error: any) {
@@ -1621,12 +1607,13 @@ app.post("/api/notifications/mark-all-read", async (req, res) => {
 // ----------------------------------------------------
 // 7. API: ORDERS & TRANSACTIONS
 // ----------------------------------------------------
-app.get("/api/orders", async (req, res) => {
+app.get("/api/orders", requireAuth, async (req, res) => {
   try {
-    const { farmerId, buyerId, status } = req.query;
+    const actor = (req as any).user;
+    const { status } = req.query;
     const orders = await getOrders({
-      farmerId: farmerId as string,
-      buyerId: buyerId as string,
+      farmerId: actor.role === "farmer" ? actor.id : undefined,
+      buyerId: actor.role === "buyer" ? actor.id : undefined,
       status: status as string,
     });
     return res.json({ success: true, count: orders.length, orders });
@@ -1636,21 +1623,29 @@ app.get("/api/orders", async (req, res) => {
   }
 });
 
-app.get("/api/orders/:id", async (req, res) => {
+app.get("/api/orders/:id", requireAuth, async (req, res) => {
   const order = await getOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ success: false, message: "Order not found" });
+  }
+  const actor = (req as any).user;
+  if (actor.id !== order.farmer_id && actor.id !== order.buyer_id) {
+    return res.status(403).json({ success: false, message: "You are not a party to this order." });
   }
   const logistics = await getLogisticsByOrderId(order.id);
   return res.json({ success: true, order: { ...order, logistics } });
 });
 
-app.post("/api/orders", async (req, res) => {
+app.post("/api/orders", requireAuth, async (req, res) => {
   try {
+    const actor = (req as any).user;
     const { listing_id, farmer_id, buyer_id, offer_id, crop_name, quantity, quantity_unit, agreed_price } = req.body;
 
     if (!farmer_id || !buyer_id || !crop_name || !quantity || !agreed_price) {
       return res.status(400).json({ success: false, message: "Missing required order fields" });
+    }
+    if (actor.id !== farmer_id && actor.id !== buyer_id) {
+      return res.status(403).json({ success: false, message: "You must be the farmer or buyer on this order." });
     }
 
     const order = await createOrder({
@@ -1675,11 +1670,19 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-app.put("/api/orders/:id", async (req, res) => {
+app.put("/api/orders/:id", requireAuth, async (req, res) => {
   try {
     const { status } = req.body;
     if (!status) {
       return res.status(400).json({ success: false, message: "Status is required" });
+    }
+    const existing = await getOrderById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+    const actor = (req as any).user;
+    if (actor.id !== existing.farmer_id && actor.id !== existing.buyer_id) {
+      return res.status(403).json({ success: false, message: "You are not a party to this order." });
     }
     const order = await updateOrderStatus(req.params.id, status);
     if (!order) {
@@ -1694,12 +1697,9 @@ app.put("/api/orders/:id", async (req, res) => {
 // ----------------------------------------------------
 // 7.1 API: BUYER CART (Persistent PostgreSQL/SQLite)
 // ----------------------------------------------------
-app.get("/api/cart", async (req, res) => {
+app.get("/api/cart", requireAuth, async (req, res) => {
   try {
-    const buyerId = (req.query.buyerId as string) || (req.query.buyer_id as string);
-    if (!buyerId) {
-      return res.status(400).json({ success: false, message: "buyerId is required" });
-    }
+    const buyerId = (req as any).user.id;
     const { items, summary } = await getCartItems(buyerId);
     return res.json({ success: true, items, summary });
   } catch (error: any) {
@@ -1708,11 +1708,10 @@ app.get("/api/cart", async (req, res) => {
   }
 });
 
-app.post("/api/cart", async (req, res) => {
+app.post("/api/cart", requireAuth, async (req, res) => {
   try {
+    const actor = (req as any).user;
     const {
-      buyerId,
-      buyer_id,
       listingId,
       listing_id,
       cropName,
@@ -1734,13 +1733,13 @@ app.post("/api/cart", async (req, res) => {
       location,
     } = req.body;
 
-    const bId = buyerId || buyer_id;
+    const bId = actor.id;
     const cName = cropName || crop_name;
     const fName = farmerName || farmer_name || "Verified Farmer";
     const uPrice = Number(unitPrice ?? unit_price);
     const qty = Number(quantity);
 
-    if (!bId || !cName || isNaN(uPrice) || isNaN(qty) || qty <= 0) {
+    if (!cName || isNaN(uPrice) || isNaN(qty) || qty <= 0) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields: buyerId, cropName, quantity, and unitPrice are required",
@@ -1776,12 +1775,18 @@ app.post("/api/cart", async (req, res) => {
   }
 });
 
-app.put("/api/cart/:id", async (req, res) => {
+app.put("/api/cart/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity } = req.body;
     if (quantity === undefined || isNaN(Number(quantity))) {
       return res.status(400).json({ success: false, message: "Valid quantity is required" });
+    }
+
+    const actor = (req as any).user;
+    const { items: ownItems } = await getCartItems(actor.id);
+    if (!ownItems.some((it: any) => it.id === id)) {
+      return res.status(404).json({ success: false, message: "Cart item not found" });
     }
 
     const item = await updateCartItemQuantity(id, Number(quantity));
@@ -1796,9 +1801,14 @@ app.put("/api/cart/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/cart/:id", async (req, res) => {
+app.delete("/api/cart/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const actor = (req as any).user;
+    const { items: ownItems } = await getCartItems(actor.id);
+    if (!ownItems.some((it: any) => it.id === id)) {
+      return res.status(404).json({ success: false, message: "Cart item not found" });
+    }
     await removeCartItem(id);
     return res.json({ success: true, message: "Item removed from cart" });
   } catch (error: any) {
@@ -1807,12 +1817,9 @@ app.delete("/api/cart/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/cart", async (req, res) => {
+app.delete("/api/cart", requireAuth, async (req, res) => {
   try {
-    const buyerId = (req.query.buyerId as string) || (req.query.buyer_id as string);
-    if (!buyerId) {
-      return res.status(400).json({ success: false, message: "buyerId is required" });
-    }
+    const buyerId = (req as any).user.id;
     await clearCart(buyerId);
     return res.json({ success: true, message: "Cart cleared successfully" });
   } catch (error: any) {
@@ -1821,13 +1828,10 @@ app.delete("/api/cart", async (req, res) => {
   }
 });
 
-app.post("/api/cart/checkout", async (req, res) => {
+app.post("/api/cart/checkout", requireAuth, async (req, res) => {
   try {
-    const { buyerId, buyer_id, itemIds } = req.body;
-    const bId = buyerId || buyer_id;
-    if (!bId) {
-      return res.status(400).json({ success: false, message: "buyerId is required to checkout" });
-    }
+    const { itemIds } = req.body;
+    const bId = (req as any).user.id;
 
     const result = await checkoutCart(bId, itemIds);
 
@@ -1846,16 +1850,30 @@ app.post("/api/cart/checkout", async (req, res) => {
 // ----------------------------------------------------
 // 8. API: LOGISTICS
 // ----------------------------------------------------
-app.get("/api/logistics", async (req, res) => {
+app.get("/api/logistics", requireAuth, async (req, res) => {
   try {
-    const records = await getAllLogistics();
+    const actor = (req as any).user;
+    const ownOrders = await getOrders({
+      farmerId: actor.role === "farmer" ? actor.id : undefined,
+      buyerId: actor.role === "buyer" ? actor.id : undefined,
+    });
+    const ownOrderIds = new Set(ownOrders.map((o: any) => o.id));
+    const records = (await getAllLogistics()).filter((r: any) => ownOrderIds.has(r.order_id));
     return res.json({ success: true, count: records.length, logistics: records });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
 });
 
-app.get("/api/logistics/:orderId", async (req, res) => {
+app.get("/api/logistics/:orderId", requireAuth, async (req, res) => {
+  const order = await getOrderById(req.params.orderId);
+  if (!order) {
+    return res.status(404).json({ success: false, message: "Order not found" });
+  }
+  const actor = (req as any).user;
+  if (actor.id !== order.farmer_id && actor.id !== order.buyer_id) {
+    return res.status(403).json({ success: false, message: "You are not a party to this order." });
+  }
   const record = await getLogisticsByOrderId(req.params.orderId);
   if (!record) {
     return res.status(404).json({ success: false, message: "Logistics record not found for this order" });
@@ -1863,12 +1881,20 @@ app.get("/api/logistics/:orderId", async (req, res) => {
   return res.json({ success: true, logistics: record });
 });
 
-app.post("/api/logistics", async (req, res) => {
+app.post("/api/logistics", requireAuth, async (req, res) => {
   try {
     const { order_id, orderId } = req.body;
     const ordId = order_id || orderId;
     if (!ordId) {
       return res.status(400).json({ success: false, message: "Order ID is required" });
+    }
+    const order = await getOrderById(ordId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+    const actor = (req as any).user;
+    if (actor.id !== order.farmer_id && actor.id !== order.buyer_id) {
+      return res.status(403).json({ success: false, message: "You are not a party to this order." });
     }
     const logistics = await createOrUpdateLogistics({ ...req.body, order_id: ordId });
     return res.status(201).json({ success: true, message: "Logistics updated", logistics });
@@ -1877,11 +1903,19 @@ app.post("/api/logistics", async (req, res) => {
   }
 });
 
-app.put("/api/logistics/:orderId", async (req, res) => {
+app.put("/api/logistics/:orderId", requireAuth, async (req, res) => {
   try {
     const { status } = req.body;
     if (!status || !["pending", "pickup_scheduled", "in_transit", "delivered"].includes(status)) {
       return res.status(400).json({ success: false, message: "Valid logistics status is required" });
+    }
+    const order = await getOrderById(req.params.orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+    const actor = (req as any).user;
+    if (actor.id !== order.farmer_id && actor.id !== order.buyer_id) {
+      return res.status(403).json({ success: false, message: "You are not a party to this order." });
     }
     const updated = await updateLogisticsStatus(req.params.orderId, status);
     if (!updated) {
