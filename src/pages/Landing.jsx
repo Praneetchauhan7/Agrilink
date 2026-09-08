@@ -49,8 +49,8 @@ export default function Landing({
     name: '',
     mobile: '',
     password: '',
-    state: 'Maharashtra',
-    district: 'Nashik',
+    state: '',
+    district: '',
     village: '',
   });
   const [farmerErrors, setFarmerErrors] = useState({});
@@ -61,8 +61,8 @@ export default function Landing({
     name: '',
     identifier: '',
     password: '',
-    state: 'Maharashtra',
-    district: 'Pune',
+    state: '',
+    district: '',
     locality: '',
     businessType: 'Supermarket Chain',
   });
@@ -210,7 +210,7 @@ export default function Landing({
         state: farmerForm.state,
         district: farmerForm.district,
         village: farmerForm.village,
-        farm_location: `${farmerForm.village || 'Pimpalgaon'}, ${farmerForm.district || 'Nashik'}`,
+        farm_location: farmerForm.village.trim(),
       };
 
       const response = await fetch(endpoint, {
@@ -236,10 +236,8 @@ export default function Landing({
 
       setAuthLoading(false);
       onSelectRole('farmer', {
-        id: data.user.id,
-        name: data.user.name,
-        mobile: data.user.mobile,
-        location: `${data.user.district || 'Nashik'}, ${data.user.state || 'Maharashtra'}`,
+        ...data.user,
+        location: data.user.profile?.farm_location || data.user.location || '',
         role: 'farmer',
       });
     } catch (err) {
@@ -295,7 +293,7 @@ export default function Landing({
         state: buyerForm.state,
         district: buyerForm.district,
         business_type: buyerForm.businessType,
-        location: `${buyerForm.locality ? buyerForm.locality.trim() + ', ' : ''}${buyerForm.district || 'Pune'}, ${buyerForm.state || 'Maharashtra'}`,
+        location: buyerForm.locality.trim(),
       };
 
       const response = await fetch(endpoint, {
@@ -321,11 +319,9 @@ export default function Landing({
 
       setAuthLoading(false);
       onSelectRole('buyer', {
-        id: data.user.id,
-        name: data.user.name,
+        ...data.user,
         identifier: buyerForm.identifier.trim(),
-        organization_name: data.user.organization_name || data.user.name,
-        location: `${data.user.district || 'Pune'}, ${data.user.state || 'Maharashtra'}`,
+        location: data.user.profile?.location || data.user.location || '',
         role: 'buyer',
       });
     } catch (err) {

@@ -72,7 +72,7 @@ export default function OrderCard({ order, onViewOrder, onUpdateStep }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid var(--neutral-200)', flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--neutral-700)' }}>
           <MapPin size={15} style={{ color: 'var(--primary-600)' }} />
-          <span>{order.deliveryLocation || 'Pune Distribution Center'}</span>
+          <span>{order.deliveryLocation || t('order.locationNotProvided', 'Location not provided')}</span>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>

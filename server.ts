@@ -830,8 +830,8 @@ app.post("/api/auth/register", async (req, res) => {
       mobile,
       email,
       password,
-      state: state || (role === "farmer" ? "Maharashtra" : "Maharashtra"),
-      district: district || (role === "farmer" ? "Nashik" : "Pune"),
+      state: state || undefined,
+      district: district || undefined,
       preferred_language,
       farm_location,
       village,
@@ -886,8 +886,6 @@ app.post("/api/auth/login", async (req, res) => {
         mobile: mobile || (userIdentifier.includes("@") ? undefined : userIdentifier),
         email: email || (userIdentifier.includes("@") ? userIdentifier : undefined),
         password,
-        state: "Maharashtra",
-        district: effectiveRole === "farmer" ? "Nashik" : "Pune",
       });
     } else {
       // Verify password if user exists and has password hash
@@ -977,18 +975,18 @@ app.put("/api/auth/profile", async (req, res) => {
     let updatedProfile: any = null;
     if (user.role === "farmer") {
       updatedProfile = await updateFarmerProfile(userId, {
-        farm_location: farm_location || location,
-        village,
-        state,
-        district,
+        farm_location: farm_location !== undefined ? farm_location.trim() || null : (location !== undefined ? location.trim() || null : undefined),
+        village: village !== undefined ? village.trim() || null : undefined,
+        state: state !== undefined ? state.trim() || null : undefined,
+        district: district !== undefined ? district.trim() || null : undefined,
       });
     } else {
       updatedProfile = await updateBuyerProfile(userId, {
-        organization_name: organization_name || name,
-        business_type,
-        location: location || farm_location,
-        state,
-        district,
+        organization_name: organization_name !== undefined ? organization_name.trim() || null : undefined,
+        business_type: business_type !== undefined ? business_type.trim() || null : undefined,
+        location: location !== undefined ? location.trim() || null : (farm_location !== undefined ? farm_location.trim() || null : undefined),
+        state: state !== undefined ? state.trim() || null : undefined,
+        district: district !== undefined ? district.trim() || null : undefined,
       });
     }
 

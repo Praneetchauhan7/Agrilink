@@ -120,7 +120,7 @@ export default function App() {
           id: l.id,
           farmerId: l.farmer_id || l.farmerId,
           farmerName: l.farmer_name || l.farmerName || 'Farmer Producer',
-          location: l.district ? `${l.district}, ${l.state}` : (l.location || 'Maharashtra'),
+          location: l.district ? `${l.district}, ${l.state || ''}`.replace(/, $/, '') : (l.location || ''),
           produce: l.crop_name || l.produce,
           variety: l.variety || 'Standard',
           emoji: (l.crop_name || l.produce || '').toLowerCase().includes('onion') ? '🧅'
@@ -159,7 +159,7 @@ export default function App() {
             buyer: d.buyer_name || d.buyer_organization || 'Institutional Buyer',
             buyerName: d.buyer_name || d.buyer_organization || 'Institutional Buyer',
             buyerType: d.business_type || 'Institutional Buyer',
-            location: d.district ? `${d.district}, ${d.state || 'Maharashtra'}` : (d.location || 'Pune, Maharashtra'),
+            location: d.district ? `${d.district}, ${d.state || ''}`.replace(/, $/, '') : (d.location || ''),
             produce: d.crop_name || d.produce || 'Produce',
             emoji: (d.crop_name || d.produce || '').toLowerCase().includes('onion') ? '🧅'
                  : (d.crop_name || d.produce || '').toLowerCase().includes('potato') ? '🥔'
@@ -280,7 +280,9 @@ export default function App() {
             price: price,
             estimatedTotalValue: totalVal,
             totalAmount: totalVal,
-            deliveryLocation: ord.delivery_location || 'Central Distribution Hub',
+            deliveryLocation: ord.delivery_location || '',
+            pickupLocation: ord.pickup_location || '',
+            logistics: ord.logistics || null,
             expectedDate: '2026-09-08',
             createdDate: ord.created_at ? new Date(ord.created_at).toLocaleDateString() : 'Today',
             estimatedDeliveryDate: ord.delivery_date || 'Within 48h',
@@ -308,7 +310,14 @@ export default function App() {
       const logRes = await fetch('/api/logistics');
       if (logRes.ok) {
         const logJson = await logRes.json();
-        setLogisticsData(logJson.logistics || []);
+        const records = logJson.logistics || [];
+        setLogisticsData(records);
+        setOrders((prev) => prev.map((order) => {
+          const logistics = records.find((record) => record.order_id === order.id) || order.logistics || null;
+          return logistics
+            ? { ...order, logistics, pickupLocation: logistics.pickup_location || '', deliveryLocation: logistics.delivery_location || '' }
+            : order;
+        }));
       }
 
       // 6. Fetch Cart from PostgreSQL
@@ -680,7 +689,7 @@ export default function App() {
         ...prev,
         role: 'buyer',
         name: prev.role === 'buyer' ? prev.name : 'FreshMart Foods',
-        location: 'Pune, Maharashtra'
+        location: ''
       }));
     } else {
       setCurrentRole('farmer');
@@ -692,7 +701,7 @@ export default function App() {
         ...prev,
         role: 'farmer',
         name: prev.role === 'farmer' ? prev.name : 'Ramesh Kumar',
-        location: 'Nashik, Maharashtra'
+        location: ''
       }));
     }
   };
@@ -724,6 +733,7 @@ export default function App() {
           quantity_unit: newProduce.unit || 'kg',
           expected_price: newProduce.expectedPrice,
           quality_grade: newProduce.quality || 'Grade A',
+          harvest_date: newProduce.harvestDate || null,
           state: 'Maharashtra',
           district: 'Nashik',
           market_location: 'Nashik APMC Mandi',
@@ -753,6 +763,7 @@ export default function App() {
           quantity: updated.quantity,
           expected_price: updated.expectedPrice,
           quality_grade: updated.quality,
+          harvest_date: updated.harvestDate || null,
         }),
       });
       loadDatabaseData();
@@ -955,6 +966,31 @@ export default function App() {
     setActiveTab('aggregated-orders');
   };
 
+  const handleSaveOrderLogistics = async (orderId, locations) => {
+    const response = await fetch('/api/logistics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_id: orderId,
+        pickup_location: locations.pickupLocation.trim() || null,
+        delivery_location: locations.deliveryLocation.trim() || null,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || 'Failed to save order locations');
+    }
+    const logistics = result.logistics;
+    setLogisticsData((prev) => [
+      ...prev.filter((record) => record.order_id !== orderId),
+      logistics,
+    ]);
+    setOrders((prev) => prev.map((order) => order.id === orderId
+      ? { ...order, logistics, pickupLocation: logistics.pickup_location || '', deliveryLocation: logistics.delivery_location || '' }
+      : order));
+    return logistics;
+  };
+
   // Advance Order Workflow Step
   const handleAdvanceOrderStep = async (orderId) => {
     setOrders((prev) =>
@@ -1089,7 +1125,7 @@ export default function App() {
                 {activeTab === 'dashboard' && (
                   <FarmerDashboard 
                     farmerName={currentUser?.name || "Farmer"}
-                    location={currentUser?.location || "Maharashtra"}
+                    location={currentUser?.location || ''}
                     produceListings={produceListings}
                     marketPrices={marketPrices}
                     buyerDemands={buyerDemands}
@@ -1147,6 +1183,7 @@ export default function App() {
                     orders={orders}
                     transactions={transactions}
                     onUpdateTransactionStatus={handleUpdateTransactionStatus}
+                    onSaveLogistics={handleSaveOrderLogistics}
                     onNavigate={handleNavigateTab}
                   />
                 )}
@@ -1171,6 +1208,10 @@ export default function App() {
                     role="farmer"
                     currentUser={currentUser}
                     farmerName={currentUser?.name || "Farmer"}
+                    onUpdateUser={(user) => {
+                      setCurrentUser(user);
+                      localStorage.setItem('agrilink_user', JSON.stringify(user));
+                    }}
                     onLogout={handleLogout}
                   />
                 )}
@@ -1183,7 +1224,7 @@ export default function App() {
                 {activeTab === 'dashboard' && (
                   <BuyerDashboard 
                     buyerName={currentUser?.name || "Procurement Manager"}
-                    location={currentUser?.location || "Maharashtra"}
+                    location={currentUser?.location || ''}
                     farmerListings={farmerListings}
                     buyerDemands={buyerDemands}
                     orders={orders}
@@ -1251,6 +1292,7 @@ export default function App() {
                     orders={orders}
                     transactions={transactions}
                     onUpdateTransactionStatus={handleUpdateTransactionStatus}
+                    onSaveLogistics={handleSaveOrderLogistics}
                     onUpdateStep={handleAdvanceOrderStep}
                     onNavigate={handleNavigateTab}
                   />
@@ -1283,6 +1325,10 @@ export default function App() {
                     role="buyer"
                     currentUser={currentUser}
                     buyerName={currentUser?.name || "Buyer"}
+                    onUpdateUser={(user) => {
+                      setCurrentUser(user);
+                      localStorage.setItem('agrilink_user', JSON.stringify(user));
+                    }}
                     onLogout={handleLogout}
                   />
                 )}

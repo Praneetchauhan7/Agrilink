@@ -9,11 +9,15 @@ export default function BuyerOrders({
   orders = [], 
   transactions = [],
   onUpdateTransactionStatus,
+  onSaveLogistics,
   onUpdateStep, 
   onNavigate 
 }) {
   const { t } = useLanguage();
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [locationForm, setLocationForm] = useState({ pickupLocation: '', deliveryLocation: '' });
+  const [isSavingLocations, setIsSavingLocations] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const [activeSection, setActiveSection] = useState('transactions');
 
   return (
@@ -73,7 +77,14 @@ export default function BuyerOrders({
                 <OrderCard
                   key={order.id}
                   order={order}
-                  onViewOrder={(ord) => setSelectedOrder(ord)}
+                  onViewOrder={(ord) => {
+                    setSelectedOrder(ord);
+                    setLocationForm({
+                      pickupLocation: ord.pickupLocation || ord.logistics?.pickup_location || '',
+                      deliveryLocation: ord.deliveryLocation || ord.logistics?.delivery_location || '',
+                    });
+                    setLocationError('');
+                  }}
                   onUpdateStep={onUpdateStep}
                 />
               ))}
@@ -122,8 +133,25 @@ export default function BuyerOrders({
                 <Truck size={15} style={{ color: 'var(--primary-600)' }} /> {t('order.deliveryConsignmentStatus', 'Delivery & Consignment Status')}
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--neutral-700)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div><strong>{t('order.destination', 'Destination')}:</strong> {selectedOrder.deliveryLocation || t('order.centralDistHub', 'Central Distribution Hub')}</div>
+                <div><strong>{t('order.pickupLocation', 'Pickup Location')}:</strong> {locationForm.pickupLocation || t('order.locationNotProvided', 'Not provided')}</div>
+                <div><strong>{t('order.destination', 'Destination')}:</strong> {locationForm.deliveryLocation || t('order.locationNotProvided', 'Not provided')}</div>
                 <div><strong>{t('order.estimatedArrival', 'Estimated Arrival')}:</strong> {selectedOrder.estimatedDeliveryDate || t('order.within48Hours', 'Within 48 hours')}</div>
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid var(--neutral-200)', borderRadius: 'var(--radius-md)', padding: 14 }}>
+              <h4 style={{ fontSize: '0.88rem', fontWeight: 800, marginBottom: 10 }}>{t('order.updateLocations', 'Order Locations')}</h4>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <input className="form-control" placeholder={t('order.pickupLocationPlaceholder', 'Enter pickup location')} value={locationForm.pickupLocation} onChange={(e) => setLocationForm((prev) => ({ ...prev, pickupLocation: e.target.value }))} />
+                <input className="form-control" placeholder={t('order.deliveryLocationPlaceholder', 'Enter delivery location')} value={locationForm.deliveryLocation} onChange={(e) => setLocationForm((prev) => ({ ...prev, deliveryLocation: e.target.value }))} />
+                {locationError && <span style={{ color: 'var(--danger-700)', fontSize: '0.82rem' }}>{locationError}</span>}
+                <button className="btn btn-primary" disabled={isSavingLocations || !onSaveLogistics} onClick={async () => {
+                  setIsSavingLocations(true);
+                  setLocationError('');
+                  try { await onSaveLogistics(selectedOrder.id, locationForm); } catch (error) { setLocationError(error.message); } finally { setIsSavingLocations(false); }
+                }}>
+                  {isSavingLocations ? t('common.loading', 'Saving...') : t('common.saveChanges', 'Save Locations')}
+                </button>
               </div>
             </div>
 

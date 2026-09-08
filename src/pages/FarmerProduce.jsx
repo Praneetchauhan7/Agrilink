@@ -32,6 +32,17 @@ export default function FarmerProduce({
   const [filterType, setFilterType] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const toDateInputValue = (value) => {
+    if (!value) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) return '';
+    const year = parsedDate.getFullYear();
+    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(parsedDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Form state
   const [formData, setFormData] = useState({
     produce: 'Tomatoes',
@@ -40,7 +51,7 @@ export default function FarmerProduce({
     unit: 'kg',
     quality: 'Grade A',
     expectedPrice: 2800,
-    harvestDate: '28 Aug 2026',
+    harvestDate: '',
     storageAvailable: true,
     location: 'Nashik, Maharashtra'
   });
@@ -63,7 +74,7 @@ export default function FarmerProduce({
       unit: 'kg',
       quality: 'Grade A',
       expectedPrice: 2800,
-      harvestDate: '28 Aug 2026',
+      harvestDate: '',
       storageAvailable: true,
       location: 'Nashik, Maharashtra'
     });
@@ -79,7 +90,7 @@ export default function FarmerProduce({
       unit: item.unit || 'kg',
       quality: item.quality,
       expectedPrice: item.expectedPrice,
-      harvestDate: item.harvestDate,
+      harvestDate: toDateInputValue(item.harvestDate),
       storageAvailable: item.storageAvailable,
       location: item.location
     });
@@ -368,11 +379,11 @@ export default function FarmerProduce({
             <div className="form-group">
               <label className="form-label">{t('produce.harvestDate', 'Harvest Date')}</label>
               <input 
-                type="text" 
+                type="date"
                 className="form-control"
+                required
                 value={formData.harvestDate}
                 onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
-                placeholder="e.g. 28 Aug 2026"
               />
             </div>
           </div>

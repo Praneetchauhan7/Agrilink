@@ -21,15 +21,24 @@ export default function FarmerOrders({
   orders = [], 
   transactions = [],
   onUpdateTransactionStatus,
+  onSaveLogistics,
   onNavigate = (_tab) => {} 
 }) {
   const { t } = useLanguage();
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [locationForm, setLocationForm] = useState({ pickupLocation: '', deliveryLocation: '' });
+  const [isSavingLocations, setIsSavingLocations] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const [showLiveTracking, setShowLiveTracking] = useState(false);
   const [activeSection, setActiveSection] = useState('transactions');
 
   const handleOpenOrder = (order) => {
     setSelectedOrder(order);
+    setLocationForm({
+      pickupLocation: order.pickupLocation || order.logistics?.pickup_location || '',
+      deliveryLocation: order.deliveryLocation || order.logistics?.delivery_location || '',
+    });
+    setLocationError('');
     setShowLiveTracking(false);
   };
 
@@ -147,7 +156,11 @@ export default function FarmerOrders({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--neutral-600)', marginTop: 4 }}>
                 <MapPin size={14} style={{ color: 'var(--primary-600)' }} />
-                <span>{t('order.destination', 'Destination')}: {selectedOrder.deliveryLocation || 'Pune Distribution Center'}</span>
+                <span>{t('order.pickupLocation', 'Pickup Location')}: {locationForm.pickupLocation || t('order.locationNotProvided', 'Not provided')}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--neutral-600)', marginTop: 4 }}>
+                <MapPin size={14} style={{ color: 'var(--primary-600)' }} />
+                <span>{t('order.destination', 'Destination')}: {locationForm.deliveryLocation || t('order.locationNotProvided', 'Not provided')}</span>
               </div>
             </div>
 
@@ -165,6 +178,22 @@ export default function FarmerOrders({
                   <Truck size={14} />
                   {showLiveTracking ? t('logistics.hideTracking', 'Hide Tracking') : t('logistics.trackDelivery', 'Track Delivery')}
                 </button>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--neutral-200)', marginTop: 14, paddingTop: 14 }}>
+                <h4 style={{ fontSize: '0.88rem', fontWeight: 800, marginBottom: 10 }}>{t('order.updateLocations', 'Order Locations')}</h4>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <input className="form-control" placeholder={t('order.pickupLocationPlaceholder', 'Enter pickup location')} value={locationForm.pickupLocation} onChange={(e) => setLocationForm((prev) => ({ ...prev, pickupLocation: e.target.value }))} />
+                  <input className="form-control" placeholder={t('order.deliveryLocationPlaceholder', 'Enter delivery location')} value={locationForm.deliveryLocation} onChange={(e) => setLocationForm((prev) => ({ ...prev, deliveryLocation: e.target.value }))} />
+                  {locationError && <span style={{ color: 'var(--danger-700)', fontSize: '0.82rem' }}>{locationError}</span>}
+                  <button className="btn btn-primary" disabled={isSavingLocations || !onSaveLogistics} onClick={async () => {
+                    setIsSavingLocations(true);
+                    setLocationError('');
+                    try { await onSaveLogistics(selectedOrder.id, locationForm); } catch (error) { setLocationError(error.message); } finally { setIsSavingLocations(false); }
+                  }}>
+                    {isSavingLocations ? t('common.loading', 'Saving...') : t('common.saveChanges', 'Save Locations')}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: '0.85rem' }}>

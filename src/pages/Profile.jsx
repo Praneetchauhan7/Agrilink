@@ -53,35 +53,43 @@ export default function Profile({
   });
 
   useEffect(() => {
-    if (currentUser) {
+    let cancelled = false;
+    const applyUser = (user) => {
+      if (!user || cancelled) return;
+      const profile = user.profile || {};
       setFormData({
-        name: currentUser.name || (isFarmer ? farmerName : buyerName),
-        organization_name: currentUser.organization_name || (isFarmer ? '' : buyerName),
-        mobile: currentUser.mobile || '+91 98765 43210',
-        email: currentUser.email || '',
-        state: currentUser.state || (currentUser.profile?.state) || 'Maharashtra',
-        district: currentUser.district || (currentUser.profile?.district) || (isFarmer ? 'Nashik' : 'Pune'),
-        village: currentUser.profile?.village || '',
-        farm_location: currentUser.profile?.farm_location || currentUser.location || (isFarmer ? 'Nashik District, Maharashtra' : ''),
-        location: currentUser.location || currentUser.profile?.location || (isFarmer ? '' : 'Pune HQ, Maharashtra'),
-        business_type: currentUser.profile?.business_type || 'Wholesaler / Retailer',
-        preferred_language: currentUser.preferred_language || language || 'en',
+        name: user.name || (isFarmer ? farmerName : buyerName),
+        organization_name: user.organization_name || (isFarmer ? '' : buyerName),
+        mobile: user.mobile || '',
+        email: user.email || '',
+        state: user.state || profile.state || '',
+        district: user.district || profile.district || '',
+        village: profile.village || '',
+        farm_location: profile.farm_location || user.location || '',
+        location: profile.location || user.location || '',
+        business_type: profile.business_type || '',
+        preferred_language: user.preferred_language || language || 'en',
       });
-    } else {
-      setFormData({
-        name: isFarmer ? farmerName : buyerName,
-        organization_name: isFarmer ? '' : buyerName,
-        mobile: '+91 98765 43210',
-        email: isFarmer ? 'ramesh.kumar@agrilink.in' : 'procurement@freshmart.in',
-        state: 'Maharashtra',
-        district: isFarmer ? 'Nashik' : 'Pune',
-        village: isFarmer ? 'Pimpalgaon' : '',
-        farm_location: isFarmer ? 'Nashik District, Maharashtra' : '',
-        location: isFarmer ? '' : 'Pune HQ, Maharashtra',
-        business_type: 'Wholesaler / Retailer',
-        preferred_language: language || 'en',
-      });
-    }
+      onUpdateUser(user);
+    };
+
+    const loadCurrentUser = async () => {
+      const token = localStorage.getItem('agrilink_token') || sessionStorage.getItem('agrilink_token');
+      if (!token) {
+        applyUser(currentUser);
+        return;
+      }
+      try {
+        const response = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+        const result = await response.json();
+        applyUser(response.ok && result.success ? result.user : currentUser);
+      } catch {
+        applyUser(currentUser);
+      }
+    };
+
+    loadCurrentUser();
+    return () => { cancelled = true; };
   }, [currentUser, isFarmer]);
 
   const handleInputChange = (e) => {
@@ -145,8 +153,8 @@ export default function Profile({
 
   const displayName = formData.name || (isFarmer ? farmerName : buyerName);
   const displayLocation = isFarmer 
-    ? (formData.farm_location || `${formData.district}, ${formData.state}`)
-    : (formData.location || `${formData.district}, ${formData.state}`);
+    ? (formData.farm_location || [formData.district, formData.state].filter(Boolean).join(', ') || 'Select location')
+    : (formData.location || [formData.district, formData.state].filter(Boolean).join(', ') || 'Select location');
 
   const initials = displayName
     .split(' ')
