@@ -1126,6 +1126,7 @@ export default function App() {
                 {activeTab === 'buyer-demand' && (
                   <FarmerDemand 
                     buyerDemands={buyerDemands}
+                    farmerListings={farmerListings}
                     onSubmitOffer={handleFarmerSubmitOffer}
                     searchQuery={searchQuery}
                   />

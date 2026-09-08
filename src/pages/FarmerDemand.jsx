@@ -1,10 +1,103 @@
 import React, { useState, useMemo } from 'react';
 import { Store, Send, ShieldCheck, MapPin, Calendar, Clock, DollarSign, CheckCircle2 } from 'lucide-react';
 import Modal from '../components/Modal';
+import MatchScore from '../components/MatchScore';
 import { useLanguage } from '../context/LanguageContext';
+
+// Quality tiers, lowest to highest - used to check if a farmer's grade meets/exceeds
+// what the buyer asked for.
+const QUALITY_ORDER = ['grade c', 'grade b', 'grade a', 'premium'];
+
+const normalize = (s) => (s || '').toString().toLowerCase().trim();
+
+/**
+ * Scores how well a buyer demand matches against the farmer's own active listings.
+ * Returns a 0-100 score plus a breakdown of which factors matched, so the UI can
+ * show real reasoning instead of a black-box number.
+ */
+function computeDemandMatch(demand, farmerListings) {
+  const demandCrop = normalize(demand.produce);
+  const activeListings = (farmerListings || []).filter((l) => normalize(l.status) === 'active');
+  const matchingListings = activeListings.filter((l) => normalize(l.produce) === demandCrop);
+
+  if (matchingListings.length === 0) {
+    return {
+      score: 0,
+      hasListing: false,
+      factors: [
+        { label: 'Produce Match', matched: false },
+        { label: 'Quantity Match', matched: false },
+        { label: 'Quality Match', matched: false },
+        { label: 'Price Match', matched: false },
+        { label: 'Location Match', matched: false },
+      ],
+    };
+  }
+
+  // Use whichever of the farmer's matching listings has the most stock -
+  // best chance of actually fulfilling the demand.
+  const listing = matchingListings.reduce(
+    (best, l) => ((l.quantity || 0) > (best?.quantity || 0) ? l : best),
+    matchingListings[0]
+  );
+
+  const requiredQty = demand.quantity || demand.requiredQuantity || demand.quantityRequired || 0;
+  const qtyRatio = requiredQty > 0 ? Math.min((listing.quantity || 0) / requiredQty, 1) : 1;
+  const qtyPoints = 15 * qtyRatio;
+  const qtyMatched = qtyRatio >= 0.9;
+
+  const farmerQualityIdx = QUALITY_ORDER.indexOf(normalize(listing.quality));
+  const demandQualityIdx = QUALITY_ORDER.indexOf(normalize(demand.quality));
+  const qualityKnown = farmerQualityIdx >= 0 && demandQualityIdx >= 0;
+  const qualityMatched = qualityKnown && farmerQualityIdx >= demandQualityIdx;
+  const qualityPoints = qualityMatched ? 15 : qualityKnown ? 7 : 5;
+
+  const targetPrice = demand.targetPrice || demand.target_price || 0;
+  const farmerPrice = listing.expectedPrice || 0;
+  let pricePoints = 5;
+  let priceMatched = false;
+  if (targetPrice > 0 && farmerPrice > 0) {
+    const diffRatio = (farmerPrice - targetPrice) / targetPrice;
+    if (diffRatio <= 0.15) {
+      pricePoints = 15;
+      priceMatched = true;
+    } else if (diffRatio <= 0.3) {
+      pricePoints = 8;
+    } else {
+      pricePoints = 3;
+    }
+  }
+
+  const demandParts = normalize(demand.location).split(',').map((s) => s.trim());
+  const farmerParts = normalize(listing.location).split(',').map((s) => s.trim());
+  let locationPoints = 3;
+  let locationMatched = false;
+  if (demandParts[0] && farmerParts[0] && demandParts[0] === farmerParts[0]) {
+    locationPoints = 15;
+    locationMatched = true;
+  } else if (demandParts[1] && farmerParts[1] && demandParts[1] === farmerParts[1]) {
+    locationPoints = 8;
+    locationMatched = true;
+  }
+
+  const score = Math.min(100, Math.round(40 + qtyPoints + qualityPoints + pricePoints + locationPoints));
+
+  return {
+    score,
+    hasListing: true,
+    factors: [
+      { label: 'Produce Match', matched: true },
+      { label: 'Quantity Match', matched: qtyMatched },
+      { label: 'Quality Match', matched: qualityMatched },
+      { label: 'Price Match', matched: priceMatched },
+      { label: 'Location Match', matched: locationMatched },
+    ],
+  };
+}
 
 export default function FarmerDemand({ 
   buyerDemands = [], 
+  farmerListings = [],
   onSubmitOffer,
   searchQuery = ''
 }) {
@@ -22,6 +115,16 @@ export default function FarmerDemand({
       return produce.includes(q) || buyer.includes(q) || loc.includes(q);
     });
   }, [buyerDemands, searchQuery]);
+
+  // Match score per demand, based on the farmer's own current active listings.
+  // Recomputes only when demands or the farmer's listings actually change.
+  const matchesByDemandId = useMemo(() => {
+    const map = {};
+    filteredDemands.forEach((d) => {
+      map[d.id] = computeDemandMatch(d, farmerListings);
+    });
+    return map;
+  }, [filteredDemands, farmerListings]);
 
   const [offerData, setOfferData] = useState({
     quantityOffered: 2500,
@@ -101,6 +204,17 @@ export default function FarmerDemand({
 
                 <span className="badge badge-grade">{demand.quality}</span>
               </div>
+
+              {matchesByDemandId[demand.id]?.hasListing ? (
+                <MatchScore
+                  score={matchesByDemandId[demand.id].score}
+                  factors={matchesByDemandId[demand.id].factors}
+                />
+              ) : (
+                <p style={{ fontSize: '0.78rem', color: 'var(--neutral-500)', background: 'var(--neutral-50)', border: '1px dashed var(--neutral-300)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', margin: 0 }}>
+                  {t('demand.noMatchingListing', "You don't have an active listing for")} <strong>{demand.produce}</strong> {t('demand.yet', 'yet — add one to see your match score.')}
+                </p>
+              )}
 
               <div style={{ background: 'var(--neutral-50)', padding: '14px', borderRadius: 'var(--radius-md)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
