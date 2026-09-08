@@ -63,6 +63,7 @@ export default function Landing({
     password: '',
     state: 'Maharashtra',
     district: 'Pune',
+    locality: '',
     businessType: 'Supermarket Chain',
   });
   const [buyerErrors, setBuyerErrors] = useState({});
@@ -70,6 +71,101 @@ export default function Landing({
 
   const [authLoading, setAuthLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+
+  // Geolocation ("Use my current location") state
+  const [geoLoading, setGeoLoading] = useState({ farmer: false, buyer: false });
+  const [geoMessage, setGeoMessage] = useState({ farmer: '', buyer: '' });
+
+  // Best-effort match of a free-text place name against our curated state/district list
+  const findClosestMatch = (name, candidates) => {
+    if (!name) return null;
+    const clean = (s) => s.toLowerCase().replace(/\s+district$/, '').trim();
+    const target = clean(name);
+    return (
+      candidates.find((c) => clean(c) === target) ||
+      candidates.find((c) => clean(c).includes(target) || target.includes(clean(c))) ||
+      null
+    );
+  };
+
+  // Uses the browser's Geolocation API + OpenStreetMap's free Nominatim reverse-geocoding
+  // service to best-effort prefill State / District / Village-or-Locality. Entirely optional -
+  // never blocks the form, and any field it can't confidently match is simply left for the
+  // user to fill in manually.
+  const handleUseCurrentLocation = (role) => {
+    if (!navigator.geolocation) {
+      setGeoMessage((m) => ({ ...m, [role]: 'Location detection is not supported on this browser.' }));
+      return;
+    }
+
+    setGeoLoading((s) => ({ ...s, [role]: true }));
+    setGeoMessage((m) => ({ ...m, [role]: '' }));
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+          );
+          const data = await res.json();
+          const addr = data?.address || {};
+
+          const matchedState = findClosestMatch(addr.state, ALL_STATE_NAMES);
+          const districtCandidates = matchedState ? getDistrictsForState(matchedState) : [];
+          const matchedDistrict = findClosestMatch(
+            addr.state_district || addr.county || addr.city_district,
+            districtCandidates
+          );
+          const place = addr.village || addr.town || addr.city || addr.suburb || addr.hamlet || '';
+
+          if (role === 'farmer') {
+            setFarmerForm((f) => ({
+              ...f,
+              state: matchedState || f.state,
+              district: matchedDistrict || (matchedState ? '' : f.district),
+              village: place || f.village,
+            }));
+          } else {
+            setBuyerForm((f) => ({
+              ...f,
+              state: matchedState || f.state,
+              district: matchedDistrict || (matchedState ? '' : f.district),
+              locality: place || f.locality,
+            }));
+          }
+
+          if (!matchedState) {
+            setGeoMessage((m) => ({
+              ...m,
+              [role]: `Detected "${place || addr.state || 'your area'}" — please select State/District manually, we couldn't match it to our list.`,
+            }));
+          } else if (!matchedDistrict) {
+            setGeoMessage((m) => ({
+              ...m,
+              [role]: `State detected as ${matchedState}. Please select your district manually.`,
+            }));
+          } else {
+            setGeoMessage((m) => ({ ...m, [role]: '' }));
+          }
+        } catch (err) {
+          console.error('Reverse geocoding failed:', err);
+          setGeoMessage((m) => ({ ...m, [role]: 'Could not detect your address. Please select manually.' }));
+        } finally {
+          setGeoLoading((s) => ({ ...s, [role]: false }));
+        }
+      },
+      (error) => {
+        setGeoLoading((s) => ({ ...s, [role]: false }));
+        const msg =
+          error.code === error.PERMISSION_DENIED
+            ? 'Location permission denied. You can select your location manually below.'
+            : 'Could not get your current location. Please select manually.';
+        setGeoMessage((m) => ({ ...m, [role]: msg }));
+      },
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  };
 
   // Handle Farmer Login / Registration
   const handleFarmerLoginSubmit = async (e) => {
@@ -199,7 +295,7 @@ export default function Landing({
         state: buyerForm.state,
         district: buyerForm.district,
         business_type: buyerForm.businessType,
-        location: `${buyerForm.district || 'Pune'}, ${buyerForm.state || 'Maharashtra'}`,
+        location: `${buyerForm.locality ? buyerForm.locality.trim() + ', ' : ''}${buyerForm.district || 'Pune'}, ${buyerForm.state || 'Maharashtra'}`,
       };
 
       const response = await fetch(endpoint, {
@@ -465,47 +561,80 @@ export default function Landing({
                   </div>
 
                   {authMode === 'register' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                          {t('landing.state', 'State')} <span style={{ color: '#dc2626' }}>*</span>
-                        </label>
-                        <select
-                          className={`form-control ${farmerErrors.state ? 'error' : ''}`}
-                          value={farmerForm.state}
-                          onChange={(e) => setFarmerForm({ ...farmerForm, state: e.target.value, district: '' })}
+                    <div className="location-section">
+                      <div className="location-section-header">
+                        <span className="location-section-title">📍 {t('landing.location', 'Location')}</span>
+                        <button
+                          type="button"
+                          className="geo-locate-btn"
+                          onClick={() => handleUseCurrentLocation('farmer')}
+                          disabled={geoLoading.farmer}
                         >
-                          <option value="">Select state</option>
-                          {ALL_STATE_NAMES.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                        {farmerErrors.state && (
-                          <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                            <AlertCircle size={12} /> {farmerErrors.state}
-                          </span>
-                        )}
+                          {geoLoading.farmer ? (
+                            <><span className="geo-spinner" /> Detecting…</>
+                          ) : (
+                            <>⌖ {t('landing.useCurrentLocation', 'Use my current location')}</>
+                          )}
+                        </button>
                       </div>
-                      <div className="form-group" style={{ margin: 0 }}>
+                      {geoMessage.farmer && <p className="geo-status-message">{geoMessage.farmer}</p>}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                            {t('landing.state', 'State')} <span style={{ color: '#dc2626' }}>*</span>
+                          </label>
+                          <select
+                            className={`form-control ${farmerErrors.state ? 'error' : ''}`}
+                            value={farmerForm.state}
+                            onChange={(e) => setFarmerForm({ ...farmerForm, state: e.target.value, district: '' })}
+                          >
+                            <option value="">Select state</option>
+                            {ALL_STATE_NAMES.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                          {farmerErrors.state && (
+                            <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <AlertCircle size={12} /> {farmerErrors.state}
+                            </span>
+                          )}
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                            {t('landing.district', 'District')} <span style={{ color: '#dc2626' }}>*</span>
+                          </label>
+                          <select
+                            className={`form-control ${farmerErrors.district ? 'error' : ''}`}
+                            value={farmerForm.district}
+                            onChange={(e) => setFarmerForm({ ...farmerForm, district: e.target.value })}
+                            disabled={!farmerForm.state}
+                          >
+                            <option value="">{farmerForm.state ? 'Select district' : 'Select state first'}</option>
+                            {getDistrictsForState(farmerForm.state).map((d) => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                          {farmerErrors.district && (
+                            <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <AlertCircle size={12} /> {farmerErrors.district}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="form-group" style={{ margin: '10px 0 12px' }}>
                         <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                          {t('landing.district', 'District')} <span style={{ color: '#dc2626' }}>*</span>
+                          {t('landing.village', 'Village / Town')}{' '}
+                          <span style={{ fontWeight: 500, color: 'var(--neutral-500)' }}>({t('common.optional', 'optional')})</span>
                         </label>
-                        <select
-                          className={`form-control ${farmerErrors.district ? 'error' : ''}`}
-                          value={farmerForm.district}
-                          onChange={(e) => setFarmerForm({ ...farmerForm, district: e.target.value })}
-                          disabled={!farmerForm.state}
-                        >
-                          <option value="">{farmerForm.state ? 'Select district' : 'Select state first'}</option>
-                          {getDistrictsForState(farmerForm.state).map((d) => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </select>
-                        {farmerErrors.district && (
-                          <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                            <AlertCircle size={12} /> {farmerErrors.district}
-                          </span>
-                        )}
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={farmerForm.village}
+                          onChange={(e) => setFarmerForm({ ...farmerForm, village: e.target.value })}
+                          placeholder="e.g. Pimpalgaon"
+                        />
                       </div>
                     </div>
                   )}
@@ -686,47 +815,81 @@ export default function Landing({
                           placeholder="e.g. Supermarket Chain"
                         />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                            {t('landing.state', 'State')} <span style={{ color: '#dc2626' }}>*</span>
-                          </label>
-                          <select
-                            className={`form-control ${buyerErrors.state ? 'error' : ''}`}
-                            value={buyerForm.state}
-                            onChange={(e) => setBuyerForm({ ...buyerForm, state: e.target.value, district: '' })}
+
+                      <div className="location-section">
+                        <div className="location-section-header">
+                          <span className="location-section-title">📍 {t('landing.location', 'Location')}</span>
+                          <button
+                            type="button"
+                            className="geo-locate-btn"
+                            onClick={() => handleUseCurrentLocation('buyer')}
+                            disabled={geoLoading.buyer}
                           >
-                            <option value="">Select state</option>
-                            {ALL_STATE_NAMES.map((s) => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
-                          {buyerErrors.state && (
-                            <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                              <AlertCircle size={12} /> {buyerErrors.state}
-                            </span>
-                          )}
+                            {geoLoading.buyer ? (
+                              <><span className="geo-spinner" /> Detecting…</>
+                            ) : (
+                              <>⌖ {t('landing.useCurrentLocation', 'Use my current location')}</>
+                            )}
+                          </button>
                         </div>
-                        <div className="form-group" style={{ margin: 0 }}>
+                        {geoMessage.buyer && <p className="geo-status-message">{geoMessage.buyer}</p>}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                              {t('landing.state', 'State')} <span style={{ color: '#dc2626' }}>*</span>
+                            </label>
+                            <select
+                              className={`form-control ${buyerErrors.state ? 'error' : ''}`}
+                              value={buyerForm.state}
+                              onChange={(e) => setBuyerForm({ ...buyerForm, state: e.target.value, district: '' })}
+                            >
+                              <option value="">Select state</option>
+                              {ALL_STATE_NAMES.map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                            {buyerErrors.state && (
+                              <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                <AlertCircle size={12} /> {buyerErrors.state}
+                              </span>
+                            )}
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                              {t('landing.cityDistrict', 'City / District')} <span style={{ color: '#dc2626' }}>*</span>
+                            </label>
+                            <select
+                              className={`form-control ${buyerErrors.district ? 'error' : ''}`}
+                              value={buyerForm.district}
+                              onChange={(e) => setBuyerForm({ ...buyerForm, district: e.target.value })}
+                              disabled={!buyerForm.state}
+                            >
+                              <option value="">{buyerForm.state ? 'Select district' : 'Select state first'}</option>
+                              {getDistrictsForState(buyerForm.state).map((d) => (
+                                <option key={d} value={d}>{d}</option>
+                              ))}
+                            </select>
+                            {buyerErrors.district && (
+                              <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                <AlertCircle size={12} /> {buyerErrors.district}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="form-group" style={{ margin: '10px 0 12px' }}>
                           <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                            {t('landing.cityDistrict', 'City / District')} <span style={{ color: '#dc2626' }}>*</span>
+                            {t('landing.locality', 'Locality / Area')}{' '}
+                            <span style={{ fontWeight: 500, color: 'var(--neutral-500)' }}>({t('common.optional', 'optional')})</span>
                           </label>
-                          <select
-                            className={`form-control ${buyerErrors.district ? 'error' : ''}`}
-                            value={buyerForm.district}
-                            onChange={(e) => setBuyerForm({ ...buyerForm, district: e.target.value })}
-                            disabled={!buyerForm.state}
-                          >
-                            <option value="">{buyerForm.state ? 'Select district' : 'Select state first'}</option>
-                            {getDistrictsForState(buyerForm.state).map((d) => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                          {buyerErrors.district && (
-                            <span style={{ fontSize: '0.75rem', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                              <AlertCircle size={12} /> {buyerErrors.district}
-                            </span>
-                          )}
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={buyerForm.locality}
+                            onChange={(e) => setBuyerForm({ ...buyerForm, locality: e.target.value })}
+                            placeholder="e.g. Kothrud, near APMC yard"
+                          />
                         </div>
                       </div>
                     </>

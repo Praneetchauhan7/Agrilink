@@ -504,6 +504,79 @@ select.form-control {
   line-height: 0;
 }
 
+.location-section {
+  border: 1.5px dashed var(--primary-200);
+  border-radius: var(--radius-md);
+  padding: 14px 14px 4px;
+  margin-bottom: 14px;
+  background: var(--neutral-50);
+}
+
+.location-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.location-section-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary-700);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.geo-locate-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  color: var(--primary-700);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.geo-locate-btn:hover:not(:disabled) {
+  background: var(--primary-100);
+}
+
+.geo-locate-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.geo-status-message {
+  font-size: 0.72rem;
+  color: var(--primary-700);
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.geo-spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--primary-200);
+  border-top-color: var(--primary-600);
+  border-radius: 50%;
+  animation: geo-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes geo-spin {
+  to { transform: rotate(360deg); }
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
