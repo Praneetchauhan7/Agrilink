@@ -259,7 +259,7 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '' }
         )}
       </div>
 
-      {/* Real Price Trend Graph with 1 Week, 1 Month, 1 Year views */}
+      {/* Real Price Trend Graph - recent reported mandi prices */}
       <RealPriceTrendGraph 
         initialCrop={selectedCrop.replace(/s$/, '')} 
       />

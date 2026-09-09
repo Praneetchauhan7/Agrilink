@@ -50,7 +50,6 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
   const [commodity, setCommodity] = useState(initialCrop);
   const [state, setState] = useState('Maharashtra');
   const [selectedMarket, setSelectedMarket] = useState(initialMarket || 'All');
-  const [period, setPeriod] = useState('1w'); // '1w', '1m', '1y'
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredRecord, setHoveredRecord] = useState(null);
@@ -62,7 +61,6 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
       if (commodity) params.append('commodity', commodity);
       if (state && state !== 'All') params.append('state', state);
       if (selectedMarket && selectedMarket !== 'All') params.append('market', selectedMarket);
-      params.append('period', period);
 
       const res = await fetch(`/api/market-price-trends?${params.toString()}`);
       const result = await res.json();
@@ -82,7 +80,7 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
 
   useEffect(() => {
     fetchTrends();
-  }, [commodity, state, selectedMarket, period]);
+  }, [commodity, state, selectedMarket]);
 
   const rawRecords = (data?.records || []).filter((r) => {
     if (selectedMarket && selectedMarket !== 'All') {
@@ -128,30 +126,13 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
           </p>
         </div>
 
-        {/* Period Selector: 1 Week, 1 Month, 1 Year */}
-        <div style={{ display: 'flex', gap: 6, background: 'var(--neutral-100)', padding: 4, borderRadius: 'var(--radius-md)' }}>
-          <button
-            className={`btn btn-sm ${period === '1w' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '4px 14px', fontSize: '0.82rem', fontWeight: 700 }}
-            onClick={() => setPeriod('1w')}
-          >
-            {t('market.periodWeek', '1 Week')}
-          </button>
-          <button
-            className={`btn btn-sm ${period === '1m' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '4px 14px', fontSize: '0.82rem', fontWeight: 700 }}
-            onClick={() => setPeriod('1m')}
-          >
-            {t('market.periodMonth', '1 Month')}
-          </button>
-          <button
-            className={`btn btn-sm ${period === '1y' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '4px 14px', fontSize: '0.82rem', fontWeight: 700 }}
-            onClick={() => setPeriod('1y')}
-          >
-            {t('market.periodYear', '1 Year')}
-          </button>
-        </div>
+        {/* Recent prices badge (replaces the old 1 Week/1 Month/1 Year filter -
+            the government's daily-price feed only has recently reported
+            prices, not a real queryable history, so a period filter would
+            show identical data regardless of which option was picked) */}
+        <span className="badge badge-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', padding: '6px 12px' }}>
+          <Calendar size={13} /> {t('market.recentPrices', 'Recent mandi prices')}
+        </span>
       </div>
 
       {/* Selectors Bar (Commodity, State, Market) */}
@@ -219,8 +200,9 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
         </button>
       </div>
 
-      {/* Mandi Trends Period Notice */}
-      {(period === '1m' || period === '1y') && (
+      {/* Historical Data Notice - shown whenever the feed only has a single
+          reporting date, which is the normal case for this data source */}
+      {!data?.hasHistoricalArchive && (
         <div style={{ 
           background: '#f0f9ff', 
           border: '1px solid #bae6fd', 
@@ -235,8 +217,8 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
         }}>
           <Info size={18} style={{ flexShrink: 0, marginTop: 2, color: '#0284c7' }} />
           <div>
-            <strong>{t('mandi.govPeriodNotice', 'Market Period Notice')} ({period === '1m' ? t('market.periodMonth', '1 Month') : t('market.periodYear', '1 Year')}):</strong>{' '}
-            {data?.historicalNotice || t('market.noHistoricalData', 'Active daily APMC market reports. Showing latest verified modal price records for the selected period.')}
+            <strong>{t('mandi.govPeriodNotice', 'About this data')}:</strong>{' '}
+            {data?.historicalNotice || t('market.noHistoricalData', 'Showing the latest verified modal price records reported by APMC mandis. The official feed does not provide a longer price history.')}
           </div>
         </div>
       )}

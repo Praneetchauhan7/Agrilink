@@ -10,6 +10,14 @@ export interface TranslationDictionary {
 
 export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   en: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "What is today's wheat price?",
+    'chatbot.q2': "What is the price of wheat in Rajasthan?",
+    'chatbot.q3': "Which market has a higher price?",
+    'chatbot.q4': "What is the modal price?",
+    'chatbot.q5': "How can I sell my crop?",
+    'chatbot.q6': "How does this platform work?",
+
     // Brand & Top Navigation
     'brand.title': 'AgriLink',
     'brand.subtitle': 'Farm Gate to Markets',
@@ -242,6 +250,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   hi: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "आज गेहूं का भाव क्या है?",
+    'chatbot.q2': "राजस्थान में गेहूं का भाव क्या है?",
+    'chatbot.q3': "किस मंडी में भाव ज़्यादा है?",
+    'chatbot.q4': "औसत भाव (मॉडल प्राइस) क्या है?",
+    'chatbot.q5': "मैं अपनी फसल कैसे बेच सकता हूँ?",
+    'chatbot.q6': "यह प्लेटफ़ॉर्म कैसे काम करता है?",
+
     // Brand & Top Navigation
     'brand.title': 'एग्रीलिंक',
     'brand.subtitle': 'खेत से सीधे बाजार तक',
@@ -474,6 +490,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   mr: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "आज गव्हाचा भाव काय आहे?",
+    'chatbot.q2': "राजस्थानमध्ये गव्हाचा भाव किती आहे?",
+    'chatbot.q3': "कोणत्या बाजारात भाव जास्त आहे?",
+    'chatbot.q4': "सरासरी भाव किती आहे?",
+    'chatbot.q5': "मी माझे पीक कसे विकू शकतो?",
+    'chatbot.q6': "हे प्लॅटफॉर्म कसे काम करते?",
+
     // Marathi Translations
     'brand.title': 'एग्रीलिंक',
     'brand.subtitle': 'शेत ते थेट बाजार',
@@ -692,6 +716,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   pa: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "ਅੱਜ ਕਣਕ ਦਾ ਭਾਅ ਕੀ ਹੈ?",
+    'chatbot.q2': "ਰਾਜਸਥਾਨ ਵਿੱਚ ਕਣਕ ਦਾ ਭਾਅ ਕੀ ਹੈ?",
+    'chatbot.q3': "ਕਿਹੜੀ ਮੰਡੀ ਵਿੱਚ ਭਾਅ ਵੱਧ ਹੈ?",
+    'chatbot.q4': "ਔਸਤ ਭਾਅ ਕੀ ਹੈ?",
+    'chatbot.q5': "ਮੈਂ ਆਪਣੀ ਫ਼ਸਲ ਕਿਵੇਂ ਵੇਚ ਸਕਦਾ ਹਾਂ?",
+    'chatbot.q6': "ਇਹ ਪਲੇਟਫਾਰਮ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ?",
+
     // Punjabi
     'brand.title': 'ਐਗਰੀਲਿੰਕ',
     'brand.subtitle': 'ਖੇਤ ਤੋਂ ਸਿੱਧਾ ਮੰਡੀ ਤੱਕ',
@@ -827,6 +859,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   gu: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "આજે ઘઉંનો ભાવ શું છે?",
+    'chatbot.q2': "રાજસ્થાનમાં ઘઉંનો ભાવ કેટલો છે?",
+    'chatbot.q3': "કયા બજારમાં ભાવ વધારે છે?",
+    'chatbot.q4': "સરેરાશ ભાવ (મોડલ પ્રાઈસ) શું છે?",
+    'chatbot.q5': "હું મારો પાક કેવી રીતે વેચી શકું?",
+    'chatbot.q6': "આ પ્લેટફોર્મ કેવી રીતે કામ કરે છે?",
+
     // Gujarati
     'brand.title': 'એગ્રીલિંક',
     'brand.subtitle': 'ખેતરથી સીધા બજાર સુધી',
@@ -949,6 +989,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   bn: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "আজ গমের দাম কত?",
+    'chatbot.q2': "রাজস্থানে গমের দাম কত?",
+    'chatbot.q3': "কোন বাজারে দাম বেশি?",
+    'chatbot.q4': "গড় (মডেল) দাম কত?",
+    'chatbot.q5': "আমি কীভাবে আমার ফসল বিক্রি করতে পারি?",
+    'chatbot.q6': "এই প্ল্যাটফর্মটি কীভাবে কাজ করে?",
+
     // Bengali
     'brand.title': 'এগ্রিলিঙ্ক',
     'brand.subtitle': 'খামার থেকে সরাসরি বাজার',
@@ -1071,6 +1119,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   ta: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "இன்று கோதுமை விலை என்ன?",
+    'chatbot.q2': "ராஜஸ்தானில் கோதுமை விலை என்ன?",
+    'chatbot.q3': "எந்த சந்தையில் விலை அதிகமாக உள்ளது?",
+    'chatbot.q4': "சராசரி (மோடல்) விலை என்ன?",
+    'chatbot.q5': "நான் என் பயிரை எப்படி விற்பது?",
+    'chatbot.q6': "இந்த தளம் எப்படி செயல்படுகிறது?",
+
     // Tamil
     'brand.title': 'அக்ரிலிங்க்',
     'brand.subtitle': 'பண்ணையிலிருந்து நேரடி சந்தைக்கு',
@@ -1193,6 +1249,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   te: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "ఈరోజు గోధుమ ధర ఎంత?",
+    'chatbot.q2': "రాజస్థాన్‌లో గోధుమ ధర ఎంత?",
+    'chatbot.q3': "ఏ మార్కెట్‌లో ధర ఎక్కువగా ఉంది?",
+    'chatbot.q4': "సగటు (మోడల్) ధర ఎంత?",
+    'chatbot.q5': "నేను నా పంటను ఎలా అమ్మగలను?",
+    'chatbot.q6': "ఈ ప్లాట్‌ఫారమ్ ఎలా పనిచేస్తుంది?",
+
     // Telugu
     'brand.title': 'అగ్రిలింక్',
     'brand.subtitle': 'పొలం నుండి నేరుగా మార్కెట్‌కు',
@@ -1315,6 +1379,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   kn: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "ಇಂದು ಗೋಧಿಯ ಬೆಲೆ ಎಷ್ಟು?",
+    'chatbot.q2': "ರಾಜಸ್ಥಾನದಲ್ಲಿ ಗೋಧಿಯ ಬೆಲೆ ಎಷ್ಟು?",
+    'chatbot.q3': "ಯಾವ ಮಾರುಕಟ್ಟೆಯಲ್ಲಿ ಬೆಲೆ ಹೆಚ್ಚಿದೆ?",
+    'chatbot.q4': "ಸರಾಸರಿ (ಮಾಡಲ್) ಬೆಲೆ ಎಷ್ಟು?",
+    'chatbot.q5': "ನಾನು ನನ್ನ ಬೆಳೆಯನ್ನು ಹೇಗೆ ಮಾರಾಟ ಮಾಡಬಹುದು?",
+    'chatbot.q6': "ಈ ವೇದಿಕೆ ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ?",
+
     // Kannada
     'brand.title': 'ಅಗ್ರಿಲಿಂಕ್',
     'brand.subtitle': 'ಹೊಲದಿಂದ ನೇರವಾಗಿ ಮಾರುಕಟ್ಟೆಗೆ',
@@ -1437,6 +1509,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   ml: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "ഇന്ന് ഗോതമ്പിന്റെ വില എത്രയാണ്?",
+    'chatbot.q2': "രാജസ്ഥാനിൽ ഗോതമ്പിന്റെ വില എത്രയാണ്?",
+    'chatbot.q3': "ഏത് മാർക്കറ്റിലാണ് വില കൂടുതൽ?",
+    'chatbot.q4': "ശരാശരി (മോഡൽ) വില എത്രയാണ്?",
+    'chatbot.q5': "എനിക്ക് എന്റെ വിള എങ്ങനെ വിൽക്കാം?",
+    'chatbot.q6': "ഈ പ്ലാറ്റ്‌ഫോം എങ്ങനെയാണ് പ്രവർത്തിക്കുന്നത്?",
+
     // Malayalam
     'brand.title': 'അഗ്രിലിങ്ക്',
     'brand.subtitle': 'പാടത്തുനിന്ന് നേരിട്ട് വിപണിയിലേക്ക്',
@@ -1559,6 +1639,14 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   },
 
   or: {
+    // Agri Assistant - Recommended Questions
+    'chatbot.q1': "ଆଜି ଗହମର ଦର କେତେ?",
+    'chatbot.q2': "ରାଜସ୍ଥାନରେ ଗହମର ଦର କେତେ?",
+    'chatbot.q3': "କେଉଁ ବଜାରରେ ଦର ଅଧିକ?",
+    'chatbot.q4': "ହାରାହାରି (ମଡେଲ) ଦର କେତେ?",
+    'chatbot.q5': "ମୁଁ ମୋର ଫସଲ କିପରି ବିକ୍ରି କରିପାରିବି?",
+    'chatbot.q6': "ଏହି ପ୍ଲାଟଫର୍ମ କିପରି କାମ କରେ?",
+
     // Odia
     'brand.title': 'ଏଗ୍ରିଲିଙ୍କ୍',
     'brand.subtitle': 'ଜମିରୁ ସିଧା ବଜାରକୁ',

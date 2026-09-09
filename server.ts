@@ -673,7 +673,7 @@ app.get("/api/market-prices", async (req, res) => {
 // 1b. API: /api/market-price-trends (Real Price Trend Graph Data)
 // ----------------------------------------------------
 app.get("/api/market-price-trends", async (req, res) => {
-  const { commodity, state, district, market, period = "1w" } = req.query;
+  const { commodity, state, district, market } = req.query;
 
   const result = await fetchRealMandiPrices({
     commodity: commodity as string,
@@ -690,7 +690,6 @@ app.get("/api/market-price-trends", async (req, res) => {
   return res.json({
     success: result.success,
     status: result.status,
-    period: String(period),
     commodity: commodity || "All",
     state: state || "All",
     district: district || "All",
