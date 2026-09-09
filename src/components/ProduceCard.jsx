@@ -11,24 +11,53 @@ import {
   Apple,
   Carrot,
   Leaf,
-  Flower2
+  Flower2,
+  CircleDot,
+  Cherry,
+  Citrus
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { getProductIconKey } from '../constants/commodities';
 
 const PRODUCT_ICON_MAP = {
   sprout: Sprout,
+
+  // Grains
   wheat: Wheat,
-  apple: Apple,
+  rice: Wheat,
+
+  // Vegetables
+  potato: CircleDot,
+  tomato: Cherry,
+  onion: CircleDot,
   carrot: Carrot,
+  vegetables: Carrot,
+
+  // Fruits
+  apple: Apple,
+  fruits: Apple,
+
+  // General agricultural produce
   leaf: Leaf,
   'flower-2': Flower2,
+  crop: Sprout,
 };
 
 function ProductTypeIcon({ item }) {
-  const Icon = PRODUCT_ICON_MAP[getProductIconKey(item?.produce, item?.category)] || Sprout;
+  const iconKey = getProductIconKey(
+    item?.produce,
+    item?.category
+  );
 
-  return <Icon size={18} style={{ color: 'var(--primary-700)' }} />;
+  const Icon = PRODUCT_ICON_MAP[iconKey] || Sprout;
+
+  return (
+    <Icon
+      size={18}
+      style={{ color: 'var(--primary-700)' }}
+      aria-hidden="true"
+    />
+  );
 }
 
 export default function ProduceCard({ item, onEdit, onDelete, onViewOffers }) {
