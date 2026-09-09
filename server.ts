@@ -1058,6 +1058,28 @@ app.get("/api/farmer/produce-listings", requireAuth, async (req, res) => {
   }
 });
 
+app.get("/api/farmer/produce-listings/:id", requireAuth, async (req, res) => {
+  try {
+    const actor = (req as any).user;
+    if (actor.role !== "farmer") {
+      return res.status(403).json({ success: false, message: "Only farmer accounts can view managed produce listings." });
+    }
+
+    const listing = await getProduceListingById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ success: false, message: "Produce listing not found" });
+    }
+    if (listing.farmer_id !== actor.id) {
+      return res.status(403).json({ success: false, message: "You can only view your own listings" });
+    }
+
+    return res.json({ success: true, listing });
+  } catch (error: any) {
+    console.error("Error fetching farmer produce listing:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.get("/api/produce", async (req, res) => {
   try {
     const {
