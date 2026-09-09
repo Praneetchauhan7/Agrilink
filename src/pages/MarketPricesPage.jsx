@@ -19,7 +19,7 @@ import PriceChart from '../components/PriceChart';
 import RealPriceTrendGraph from '../components/RealPriceTrendGraph';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function MarketPricesPage({ marketPrices = {}, searchQuery = '' }) {
+export default function MarketPricesPage({ marketPrices = {}, searchQuery = '', role = 'buyer' }) {
   const { t } = useLanguage();
   const [selectedCrop, setSelectedCrop] = useState('Tomatoes');
 
@@ -264,16 +264,18 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '' }
         initialCrop={selectedCrop.replace(/s$/, '')} 
       />
 
-      {/* Main Benchmark Chart Section */}
-      <div style={{ marginBottom: 28 }}>
-        <PriceChart 
-          marketData={marketPrices} 
-          selectedProduce={selectedCrop}
-        />
-      </div>
+      {role !== 'farmer' && (
+        <>
+          {/* Main Benchmark Chart Section */}
+          <div style={{ marginBottom: 28 }}>
+            <PriceChart 
+              marketData={marketPrices} 
+              selectedProduce={selectedCrop}
+            />
+          </div>
 
-      {/* Mandi Benchmark Price Comparison Table */}
-      <div className="card">
+          {/* Mandi Benchmark Price Comparison Table */}
+          <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{t('marketPrices.regionalBenchmarkRates', 'Major Regional APMC Benchmark Rates ({crop})', { crop: selectedCrop })}</h3>
@@ -326,7 +328,9 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '' }
             </tbody>
           </table>
         </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
