@@ -54,7 +54,34 @@ export default function FindProduce({
       const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.produce)) {
-        setDbListings(data.produce);
+        setDbListings(data.produce.map((listing) => {
+          const produce = listing.crop_name || listing.produce || 'Produce';
+          return {
+            ...listing,
+            farmerId: listing.farmer_id || listing.farmerId,
+            farmerName: listing.farmer_name || listing.farmerName || 'Farmer Producer',
+            location: listing.district
+              ? `${listing.district}, ${listing.state || ''}`.replace(/, $/, '')
+              : (listing.location || ''),
+            produce,
+            emoji: produce.toLowerCase().includes('onion') ? '🧅'
+                 : produce.toLowerCase().includes('potato') ? '🥔'
+                 : produce.toLowerCase().includes('wheat') ? '🌾'
+                 : produce.toLowerCase().includes('grape') ? '🍇'
+                 : produce.toLowerCase().includes('rice') ? '🍚'
+                 : '🍅',
+            quantity: Number(listing.quantity) || 0,
+            unit: listing.quantity_unit || 'kg',
+            quality: listing.quality_grade || 'Grade A',
+            expectedPrice: Number(listing.expected_price) || 0,
+            harvestDate: listing.harvest_date || 'Current Harvest',
+            storageAvailable: true,
+            status: listing.status === 'active' ? 'Active' : (listing.status || 'Active'),
+            distanceKm: listing.distanceKm || 25,
+            type: listing.type || 'Farmer',
+            phone: listing.farmer_mobile || listing.phone || ''
+          };
+        }));
       } else {
         setDbListings(initialFarmerListings);
       }
