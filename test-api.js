@@ -21,7 +21,7 @@ async function testDataGovApi() {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'AgriLink-DataGov-Tester/1.0'
+        'User-Agent': 'KisanSetu-DataGov-Tester/1.0'
       }
     });
 

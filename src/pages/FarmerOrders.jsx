@@ -235,7 +235,7 @@ export default function FarmerOrders({
                       <CheckCircle2 size={16} style={{ color: 'var(--primary-600)', marginTop: 2, flexShrink: 0 }} />
                       <div>
                         <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{t('logistics.orderConfirmedEscrowFunded', 'Order Confirmed & Escrow Funded')}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>{t('logistics.paymentHeldEscrow', 'Payment held securely in AgriLink escrow')}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>{t('logistics.paymentHeldEscrow', 'Payment held securely in KisanSetu escrow')}</div>
                       </div>
                     </div>
 

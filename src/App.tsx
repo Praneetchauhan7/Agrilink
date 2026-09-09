@@ -33,7 +33,7 @@ export default function App() {
   // Authenticated User State from active session/localStorage
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('agrilink_user');
+      const stored = localStorage.getItem('kisansetu_user');
       if (stored) return JSON.parse(stored);
     } catch (e) {}
     return null;
@@ -42,12 +42,12 @@ export default function App() {
   // App active view role
   const [currentRole, setCurrentRole] = useState(() => {
     try {
-      const storedRole = localStorage.getItem('agrilink_role');
+      const storedRole = localStorage.getItem('kisansetu_role');
       if (storedRole === 'farmer' || storedRole === 'buyer') {
         return storedRole;
       }
-      const token = localStorage.getItem('agrilink_token');
-      const stored = localStorage.getItem('agrilink_user');
+      const token = localStorage.getItem('kisansetu_token');
+      const stored = localStorage.getItem('kisansetu_user');
       if (token && stored) {
         const u = JSON.parse(stored);
         if (u && (u.role === 'farmer' || u.role === 'buyer')) {
@@ -65,7 +65,7 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
       if (tabParam) return tabParam;
-      const storedTab = localStorage.getItem('agrilink_tab');
+      const storedTab = localStorage.getItem('kisansetu_tab');
       if (storedTab) return storedTab;
     } catch (e) {}
     return 'dashboard';
@@ -457,7 +457,7 @@ export default function App() {
     const cleanTab = (newTab || 'dashboard').trim();
     setActiveTab(cleanTab);
     try {
-      localStorage.setItem('agrilink_tab', cleanTab);
+      localStorage.setItem('kisansetu_tab', cleanTab);
       if (window.location.hash !== `#${cleanTab}`) {
         window.history.replaceState(null, '', `#${cleanTab}`);
       }
@@ -471,7 +471,7 @@ export default function App() {
       if (hash && hash !== activeTab) {
         setActiveTab(hash);
         try {
-          localStorage.setItem('agrilink_tab', hash);
+          localStorage.setItem('kisansetu_tab', hash);
         } catch (e) {}
       }
     };
@@ -482,7 +482,7 @@ export default function App() {
   useEffect(() => {
     if (activeTab && currentRole !== 'landing') {
       try {
-        localStorage.setItem('agrilink_tab', activeTab);
+        localStorage.setItem('kisansetu_tab', activeTab);
         if (window.location.hash !== `#${activeTab}`) {
           window.history.replaceState(null, '', `#${activeTab}`);
         }
@@ -662,7 +662,7 @@ export default function App() {
   const handleSelectRole = (role, userDetails = null) => {
     setCurrentRole(role);
     try {
-      localStorage.setItem('agrilink_role', role);
+      localStorage.setItem('kisansetu_role', role);
     } catch (e) {}
     handleNavigateTab('dashboard');
     setIsMobileMenuOpen(false);
@@ -682,7 +682,7 @@ export default function App() {
     if (currentRole === 'farmer') {
       setCurrentRole('buyer');
       try {
-        localStorage.setItem('agrilink_role', 'buyer');
+        localStorage.setItem('kisansetu_role', 'buyer');
       } catch (e) {}
       handleNavigateTab('dashboard');
       setCurrentUser((prev) => ({
@@ -694,7 +694,7 @@ export default function App() {
     } else {
       setCurrentRole('farmer');
       try {
-        localStorage.setItem('agrilink_role', 'farmer');
+        localStorage.setItem('kisansetu_role', 'farmer');
       } catch (e) {}
       handleNavigateTab('dashboard');
       setCurrentUser((prev) => ({
@@ -707,10 +707,10 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('agrilink_token');
-    localStorage.removeItem('agrilink_user');
-    localStorage.removeItem('agrilink_role');
-    localStorage.removeItem('agrilink_tab');
+    localStorage.removeItem('kisansetu_token');
+    localStorage.removeItem('kisansetu_user');
+    localStorage.removeItem('kisansetu_role');
+    localStorage.removeItem('kisansetu_tab');
     try {
       window.history.replaceState(null, '', window.location.pathname);
     } catch (e) {}

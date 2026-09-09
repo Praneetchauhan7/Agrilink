@@ -27,7 +27,7 @@ const LanguageContext = createContext<LanguageContextType>({
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('agrilink_lang');
+      const saved = localStorage.getItem('kisansetu_lang');
       if (saved && LANGUAGES.some(l => l.code === saved)) {
         return saved;
       }
@@ -48,7 +48,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setLanguage = (newLang: string) => {
     setLanguageState(newLang);
     try {
-      localStorage.setItem('agrilink_lang', newLang);
+      localStorage.setItem('kisansetu_lang', newLang);
       document.documentElement.lang = newLang;
     } catch (e) {
       // ignore

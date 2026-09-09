@@ -5,7 +5,7 @@ const path = require('path');
 // Base English dictionary
 const en = {
   // Brand & Top Navigation
-  'brand.title': 'AgriLink',
+  'brand.title': 'KisanSetu',
   'brand.subtitle': 'Agricultural Marketplace',
   'portal.farmer': '👨‍🌾 Farmer Portal',
   'portal.buyer': '🏢 Buyer Portal',
@@ -457,9 +457,9 @@ const en = {
   'notif.unreadBadge': 'Unread',
 
   // Chatbot UI
-  'chat.title': 'AgriLink AI Assistant',
+  'chat.title': 'KisanSetu AI Assistant',
   'chat.subtitle': 'Powered by data.gov.in & Gemini AI',
-  'chat.welcome': 'Hello! I am your AgriLink agricultural assistant. Ask me anything about mandi prices, market trends, or how to buy and sell produce.',
+  'chat.welcome': 'Hello! I am your KisanSetu agricultural assistant. Ask me anything about mandi prices, market trends, or how to buy and sell produce.',
   'chat.placeholder': 'Ask about wheat price, mandi, or selling produce...',
   'chat.inputPlaceholder': 'Ask about wheat price, mandi, or selling produce...',
   'chat.send': 'Send',

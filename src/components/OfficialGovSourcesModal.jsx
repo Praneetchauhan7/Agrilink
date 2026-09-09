@@ -174,7 +174,7 @@ export default function OfficialGovSourcesModal({ isOpen, onClose }) {
           }}>
             <Database size={22} style={{ color: 'var(--primary-600)', flexShrink: 0, marginTop: 2 }} />
             <div style={{ fontSize: '0.85rem', color: 'var(--neutral-700)', lineHeight: 1.55 }}>
-              <strong style={{ color: 'var(--neutral-900)' }}>{t('govModal.protocol', "Official Data Protocol:")}</strong> {t('govModal.protocolText', "All mandi price data and agricultural intelligence in AgriLink adhere to verified Government of India feeds (such as the data.gov.in Mandi Price Catalog and Agmarknet). We never invent or fabricate agricultural data.")}
+              <strong style={{ color: 'var(--neutral-900)' }}>{t('govModal.protocol', "Official Data Protocol:")}</strong> {t('govModal.protocolText', "All mandi price data and agricultural intelligence in KisanSetu adhere to verified Government of India feeds (such as the data.gov.in Mandi Price Catalog and Agmarknet). We never invent or fabricate agricultural data.")}
             </div>
           </div>
 

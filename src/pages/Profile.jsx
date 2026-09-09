@@ -74,7 +74,7 @@ export default function Profile({
     };
 
     const loadCurrentUser = async () => {
-      const token = localStorage.getItem('agrilink_token') || sessionStorage.getItem('agrilink_token');
+      const token = localStorage.getItem('kisansetu_token') || sessionStorage.getItem('kisansetu_token');
       if (!token) {
         applyUser(currentUser);
         return;
@@ -104,7 +104,7 @@ export default function Profile({
     setSaveErrorMsg('');
 
     try {
-      const token = localStorage.getItem('agrilink_token') || sessionStorage.getItem('agrilink_token');
+      const token = localStorage.getItem('kisansetu_token') || sessionStorage.getItem('kisansetu_token');
       const headers = { 'Content-Type': 'application/json' };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;

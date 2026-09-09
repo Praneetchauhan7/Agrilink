@@ -1,4 +1,4 @@
-// Comprehensive translation compiler for all 11 languages supported by AgriLink
+// Comprehensive translation compiler for all 11 languages supported by KisanSetu
 const fs = require('fs');
 const path = require('path');
 

@@ -228,10 +228,10 @@ export default function Landing({
       }
 
       if (data.token) {
-        localStorage.setItem('agrilink_token', data.token);
+        localStorage.setItem('kisansetu_token', data.token);
       }
       if (data.user) {
-        localStorage.setItem('agrilink_user', JSON.stringify(data.user));
+        localStorage.setItem('kisansetu_user', JSON.stringify(data.user));
       }
 
       setAuthLoading(false);
@@ -311,10 +311,10 @@ export default function Landing({
       }
 
       if (data.token) {
-        localStorage.setItem('agrilink_token', data.token);
+        localStorage.setItem('kisansetu_token', data.token);
       }
       if (data.user) {
-        localStorage.setItem('agrilink_user', JSON.stringify(data.user));
+        localStorage.setItem('kisansetu_user', JSON.stringify(data.user));
       }
 
       setAuthLoading(false);
@@ -338,7 +338,7 @@ export default function Landing({
         <div className="brand-logo">
           <div className="brand-icon">🌱</div>
           <div className="brand-text">
-            <h2>{t('brand.title', 'AgriLink')}</h2>
+            <h2>{t('brand.title', 'KisanSetu')}</h2>
             <span>{t('brand.subtitle', 'Agricultural Marketplace')}</span>
           </div>
         </div>
@@ -386,7 +386,7 @@ export default function Landing({
           </div>
 
           <h1 className="landing-main-title">
-            {t('landing.welcomeTo', 'Welcome to')} <span className="text-green">{t('brand.title', 'AgriLink')}</span>
+            {t('landing.welcomeTo', 'Welcome to')} <span className="text-green">{t('brand.title', 'KisanSetu')}</span>
           </h1>
 
           <p className="landing-tagline">
@@ -943,7 +943,7 @@ export default function Landing({
       {/* Minimal Clean Footer */}
       <footer className="landing-simple-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '16px 36px' }}>
         <div>
-          <strong>{t('brand.title', 'AgriLink')}</strong> • {t('landing.footerText', 'Agricultural Price Discovery & Supply Aggregation')}
+          <strong>{t('brand.title', 'KisanSetu')}</strong> • {t('landing.footerText', 'Agricultural Price Discovery & Supply Aggregation')}
         </div>
       </footer>
     </div>

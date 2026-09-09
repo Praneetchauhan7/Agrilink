@@ -1,5 +1,5 @@
 /**
- * AgriLink Static Configurations
+ * KisanSetu Static Configurations
  * Real marketplace data is dynamically loaded from the backend SQLite database and official data.gov.in APIs.
  */
 

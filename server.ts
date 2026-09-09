@@ -60,7 +60,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "agrilink-secure-jwt-key-2026";
+const JWT_SECRET = process.env.JWT_SECRET || "kisansetu-secure-jwt-key-2026";
 
 app.use(express.json());
 
@@ -275,7 +275,7 @@ async function fetchRealMandiPrices(filters: {
     const response = await fetch(url.toString(), {
       signal: controller.signal,
       headers: {
-        "User-Agent": "AgriLink-Marketplace/1.0",
+        "User-Agent": "KisanSetu-Marketplace/1.0",
         Accept: "application/json",
       },
     });
@@ -543,7 +543,7 @@ function getOfflineAgricultureResponse(
     return `₹${Number(first.modal_price).toLocaleString()} / quintal (${first.market}, ${first.state} • ${first.date})`;
   }
 
-  // 2. Selling produce on AgriLink
+  // 2. Selling produce on KisanSetu
   if (
     query.includes("sell") ||
     query.includes("how to sell") ||
@@ -563,12 +563,13 @@ function getOfflineAgricultureResponse(
     query.includes("how it works") ||
     query.includes("aggregation") ||
     query.includes("काम कैसे करता") ||
+    query.includes("kisansetu") ||
     query.includes("agrilink")
   ) {
     if (isHindi) {
-      return `AgriLink छोटे किसानों की उपज को बड़े ऑर्डरों में एकत्रित (aggregate) करता है, सीधे थोक खरीदारों से जोड़ता है और डिलीवरी पर सुरक्षित भुगतान जारी करता है।`;
+      return `KisanSetu छोटे किसानों की उपज को बड़े ऑर्डरों में एकत्रित (aggregate) करता है, सीधे थोक खरीदारों से जोड़ता है और डिलीवरी पर सुरक्षित भुगतान जारी करता है।`;
     }
-    return `AgriLink aggregates crop lots from multiple farmers into bulk orders, connects directly with institutional buyers, and releases payment securely upon delivery.`;
+    return `KisanSetu aggregates crop lots from multiple farmers into bulk orders, connects directly with institutional buyers, and releases payment securely upon delivery.`;
   }
 
   // 4. Modal price explanation
@@ -2062,7 +2063,7 @@ ${liveDataContext}`;
       reply: fallbackText,
       source: realMarketData?.success
         ? "data.gov.in (Official OGD Platform)"
-        : "agrilink-knowledge-engine",
+        : "kisansetu-knowledge-engine",
       language: language,
       realDataStatus: realMarketData?.status || "general_knowledge",
     });
@@ -2074,7 +2075,7 @@ ${liveDataContext}`;
     );
     return res.json({
       reply: fallbackText,
-      source: "agrilink-knowledge-engine",
+      source: "kisansetu-knowledge-engine",
       language: req.body?.language || "en",
       realDataStatus: "general_knowledge",
     });
@@ -2127,7 +2128,7 @@ app.get("/api/soil", async (req, res) => {
 app.get("/api/health", async (req, res) => {
   res.json({
     status: "ok",
-    appName: "AgriLink",
+    appName: "KisanSetu",
     hasGeminiKey: !!process.env.GEMINI_API_KEY,
     hasDataGovKey: !!(process.env.DATA_GOV_API_KEY || process.env.OGD_API_KEY),
     officialDataset: DATA_GOV_CATALOG_URL,
@@ -2162,7 +2163,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🌾 AgriLink server running on http://0.0.0.0:${PORT}`);
+    console.log(`🌾 KisanSetu server running on http://0.0.0.0:${PORT}`);
   });
 }
 

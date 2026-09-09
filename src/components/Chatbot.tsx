@@ -231,7 +231,7 @@ export default function Chatbot({
   // Draggable position state
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
     try {
-      const saved = localStorage.getItem('agrilink_chatbot_pos');
+      const saved = localStorage.getItem('kisansetu_chatbot_pos');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
@@ -312,7 +312,7 @@ export default function Chatbot({
     dragRef.current.activePointerId = -1;
 
     if (dragRef.current.hasMoved) {
-      localStorage.setItem('agrilink_chatbot_pos', JSON.stringify(position));
+      localStorage.setItem('kisansetu_chatbot_pos', JSON.stringify(position));
     } else {
       setIsOpen(true);
     }

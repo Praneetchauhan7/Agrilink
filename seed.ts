@@ -1,5 +1,5 @@
 /**
- * Development Seed Script for AgriLink
+ * Development Seed Script for KisanSetu
  * 
  * IMPORTANT: This script is for optional development/testing purposes ONLY.
  * It is NOT executed automatically when the server runs.
@@ -27,7 +27,7 @@ async function seed() {
     role: 'farmer',
     name: 'Ramesh Kumar',
     mobile: '9876543210',
-    email: 'ramesh.kumar@agrilink.in',
+    email: 'ramesh.kumar@kisansetu.in',
     password: 'password123',
     state: 'Maharashtra',
     district: 'Nashik',

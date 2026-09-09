@@ -1,5 +1,5 @@
 /**
- * AgriLink Centralized Translation & i18n System
+ * KisanSetu Centralized Translation & i18n System
  * Translates the entire application interface into all supported languages.
  * Dynamic data (User names, crop names, market names, govt API raw values) remains unchanged.
  */
@@ -11,7 +11,7 @@ export interface TranslationDictionary {
 export const TRANSLATIONS: Record<string, TranslationDictionary> = {
   en: {
     // Brand & Top Navigation
-    'brand.title': 'AgriLink',
+    'brand.title': 'KisanSetu',
     'brand.subtitle': 'Farm Gate to Markets',
     'portal.farmer': '👨‍🌾 Farmer Portal',
     'portal.buyer': '🏢 Buyer Portal',
@@ -217,9 +217,9 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
     'notif.unreadBadge': 'Unread',
 
     // Chatbot
-    'chat.title': 'AgriLink AI Assistant',
+    'chat.title': 'KisanSetu AI Assistant',
     'chat.subtitle': 'Powered by Live Mandi Intelligence & Gemini AI',
-    'chat.welcome': 'Namaste! I am your AgriLink assistant. Ask me about live mandi prices, selling produce, smart stock aggregation, or crop cultivation advice.',
+    'chat.welcome': 'Namaste! I am your KisanSetu assistant. Ask me about live mandi prices, selling produce, smart stock aggregation, or crop cultivation advice.',
     'chat.placeholder': 'Ask about mandi prices, how to sell, crop care...',
     'chat.send': 'Send',
     'chat.clear': 'Clear Chat',
@@ -235,7 +235,7 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
     'auth.iamBuyer': 'I am a Buyer / Processor',
     'auth.identifier': 'Mobile Number or Email',
     'auth.password': 'Password',
-    'auth.loginBtn': 'Log In to AgriLink',
+    'auth.loginBtn': 'Log In to KisanSetu',
     'auth.registerBtn': 'Create Account',
     'auth.noAccount': "Don't have an account?",
     'auth.haveAccount': 'Already have an account?',
@@ -243,7 +243,7 @@ export const TRANSLATIONS: Record<string, TranslationDictionary> = {
 
   hi: {
     // Brand & Top Navigation
-    'brand.title': 'एग्रीलिंक',
+    'brand.title': 'किसनसेतु',
     'brand.subtitle': 'खेत से सीधे बाजार तक',
     'portal.farmer': '👨‍🌾 किसान पोर्टल',
     'portal.buyer': '🏢 खरीदार पोर्टल',

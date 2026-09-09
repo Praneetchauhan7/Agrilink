@@ -80,7 +80,7 @@ export default function Sidebar({
           <div className="brand-logo" onClick={() => handleNavClick('dashboard')}>
             <div className="brand-icon">🌱</div>
             <div className="brand-text">
-              <h2>{t('brand.title', 'AgriLink')}</h2>
+              <h2>{t('brand.title', 'KisanSetu')}</h2>
               <span>{t('brand.subtitle', 'Farm Gate to Markets')}</span>
             </div>
           </div>

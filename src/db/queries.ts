@@ -1096,7 +1096,7 @@ export async function updateOfferStatus(
         orderId,
         listing?.market_location || listing?.district || 'Farm Gate',
         'Buyer Central Hub',
-        'AgriLink Verified Logistics',
+        'KisanSetu Verified Logistics',
         'MH-15-TC-4402'
       ]
     );
@@ -1414,7 +1414,7 @@ export async function createOrder(data: {
       orderId,
       'Farm Gate Warehouse',
       'Buyer Receiving Hub',
-      'AgriLink Verified Logistics',
+      'KisanSetu Verified Logistics',
       'MH-04-AX-8910'
     ]
   );
@@ -1508,7 +1508,7 @@ export async function createOrUpdateLogistics(data: {
         data.order_id,
         data.pickup_location?.trim() || null,
         data.delivery_location?.trim() || null,
-        data.transporter_name?.trim() || 'AgriLink Logistics',
+        data.transporter_name?.trim() || 'KisanSetu Logistics',
         data.vehicle_number?.trim() || null,
         data.estimated_delivery_date || null,
         data.status || 'pending'
@@ -1777,9 +1777,8 @@ export async function checkoutCart(buyerId: string, itemIds?: string[]) {
       order_id: orderId,
       pickup_location: item.location || 'Farm Gate, Nashik Hub',
       delivery_location: 'Buyer Warehouse / Processing Center',
-      transporter_name: 'AgriLink Express Logistics',
+      transporter_name: 'KisanSetu Express Logistics',
       status: 'pending',
-    });
 
     // 3. Create transaction record for procurement contract & escrow flow
     const txId = `tx_${crypto.randomUUID().slice(0, 12)}`;

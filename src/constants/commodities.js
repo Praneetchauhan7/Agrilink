@@ -1,4 +1,4 @@
-// Standardized Indian Agricultural Commodities for AgriLink
+// Standardized Indian Agricultural Commodities for KisanSetu
 // Used across Farmer Listings, Buyer Requirements, Search, Offers, and Market Pricing
 
 export const COMMODITIES = [

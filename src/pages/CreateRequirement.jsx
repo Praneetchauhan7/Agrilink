@@ -212,7 +212,7 @@ export default function CreateRequirement({
             </div>
 
             <p style={{ fontSize: '0.88rem', color: 'var(--neutral-700)', lineHeight: 1.6 }}>
-              {t('req.aggregationDesc1', 'Instead of forcing you to hunt for one large seller, AgriLink scans all verified farmers and FPOs in the regional cluster.')}
+              {t('req.aggregationDesc1', 'Instead of forcing you to hunt for one large seller, KisanSetu scans all verified farmers and FPOs in the regional cluster.')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
