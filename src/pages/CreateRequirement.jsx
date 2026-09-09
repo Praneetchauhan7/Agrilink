@@ -3,6 +3,7 @@ import { Sparkles, Layers, ArrowRight, ShieldCheck, CheckCircle2, Sliders, MapPi
 import AggregationResult from '../components/AggregationResult';
 import { useLanguage } from '../context/LanguageContext';
 import { COMMODITIES, getCommodityEmoji } from '../constants/commodities';
+import { ALL_MARKETS } from '../constants/locations';
 
 export default function CreateRequirement({ 
   farmerListings = [],
@@ -25,6 +26,7 @@ export default function CreateRequirement({
   });
 
   const [hasSearched, setHasSearched] = useState(false);
+  const minimumDeliveryDate = new Date().toISOString().split('T')[0];
 
   const matchedSuppliers = farmerListings
     .filter(f => !formData.produce || (f.produce || '').toLowerCase() === formData.produce.toLowerCase())
@@ -145,21 +147,26 @@ export default function CreateRequirement({
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">{t('req.deliveryLocation', 'Delivery Location')}</label>
-                <input 
-                  type="text" 
+                <select 
                   className="form-control"
                   required
                   value={formData.delivery}
                   onChange={(e) => setFormData({ ...formData, delivery: e.target.value })}
-                />
+                >
+                  <option value="">{t('req.selectDeliveryLocation', 'Select a delivery location')}</option>
+                  {ALL_MARKETS.map((market) => (
+                    <option key={market} value={market}>{market}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
                 <label className="form-label">{t('req.requiredDeliveryBy', 'Required Delivery By')}</label>
-                <input 
-                  type="text" 
+                <input
+                  type="date"
                   className="form-control"
                   required
+                  min={minimumDeliveryDate}
                   value={formData.requiredBy}
                   onChange={(e) => setFormData({ ...formData, requiredBy: e.target.value })}
                 />
