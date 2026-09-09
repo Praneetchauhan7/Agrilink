@@ -300,13 +300,4 @@ The central idea is simple: **From Farm Gate to Better Markets.**
 
 By improving market connectivity, enabling multi-farmer stock aggregation, and reducing information and access barriers — with pricing grounded in official government data — KisanSetu can help create a more efficient, transparent, and farmer-focused agricultural trading ecosystem.
 
-## 18. License
 
-No license file is currently present in the repository. Add a LICENSE file (for example, the MIT License) if the project is intended to be open source.
-
----
-
-**Live Project:** [KisanSetu](https://kisansetu-0cjn.onrender.com/)
-**Source Code:** [github.com/Praneetchauhan7/Agrilink](https://github.com/Praneetchauhan7/Agrilink)
-
-*Built to connect farmers, markets, and opportunities through technology.*
