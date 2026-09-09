@@ -37,7 +37,10 @@ export default function NegotiationHistoryModal({
     if (!offer?.id) return;
     setLoading(true);
     setErrorMsg(null);
-    fetch(`/api/offers/${offer.id}/history`)
+    const token = localStorage.getItem('agrilink_token');
+    fetch(`/api/offers/${offer.id}/history`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then(res => res.json())
       .then(data => {
         if (data.success && data.history) {
@@ -89,7 +92,10 @@ export default function NegotiationHistoryModal({
       });
       setShowCounterForm(false);
       // Reload history
-      const res = await fetch(`/api/offers/${offer.id}/history`);
+      const token = localStorage.getItem('agrilink_token');
+      const res = await fetch(`/api/offers/${offer.id}/history`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       if (data.history) setHistory(data.history);
     } catch (err) {

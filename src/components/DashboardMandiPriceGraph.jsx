@@ -24,8 +24,6 @@ const COMMODITIES = [
   { name: 'Garlic', emoji: '🧄' }
 ];
 
-const PERIODS = ['Week', 'Month', 'Year'];
-
 // Date parsing helper for Indian DD/MM/YYYY or standard ISO date strings
 function parseDate(dateStr) {
   if (!dateStr) return new Date();
@@ -46,7 +44,6 @@ export default function DashboardMandiPriceGraph({ onNavigate }) {
   const { t } = useLanguage();
   const [selectedCommodity, setSelectedCommodity] = useState('Tomato');
   const [selectedMarket, setSelectedMarket] = useState('');
-  const [period, setPeriod] = useState('Week'); // 'Week', 'Month', 'Year'
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredBar, setHoveredBar] = useState(null);
@@ -163,20 +160,12 @@ export default function DashboardMandiPriceGraph({ onNavigate }) {
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }, [marketRecords]);
 
-  // Filter by selected period (Week: 7 days, Month: 30 days, Year: 365 days)
-  const displayBars = useMemo(() => {
-    if (aggregatedByDate.length === 0) return [];
-    const latestTimestamp = Math.max(...aggregatedByDate.map((d) => d.dateObj.getTime()));
-    const msInDay = 24 * 60 * 60 * 1000;
-    const periodDays = period === 'Week' ? 7 : period === 'Month' ? 30 : 365;
-
-    const filtered = aggregatedByDate.filter((d) => {
-      const diffDays = (latestTimestamp - d.dateObj.getTime()) / msInDay;
-      return diffDays <= periodDays;
-    });
-
-    return filtered.length > 0 ? filtered : aggregatedByDate;
-  }, [aggregatedByDate, period]);
+  // The data.gov.in daily-price feed only ever contains whatever's currently
+  // been reported (typically the last day or two) - it has no real
+  // week/month/year history to query. So we show everything that's actually
+  // been reported, rather than a fake period filter that would return
+  // identical results no matter which option was picked.
+  const displayBars = aggregatedByDate;
 
   // Selected commodity object
   const currentCommodityObj = COMMODITIES.find((c) => c.name === selectedCommodity) || { 
@@ -293,23 +282,14 @@ export default function DashboardMandiPriceGraph({ onNavigate }) {
           </select>
         </div>
 
-        {/* Period Selector: Week / Month / Year */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--neutral-700)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Calendar size={13} /> {t('common.period', 'Period')}:
-          </label>
-          <div style={{ display: 'flex', gap: 2, background: 'var(--neutral-200)', padding: 2, borderRadius: 'var(--radius-md)' }}>
-            {PERIODS.map((p) => (
-              <button
-                key={p}
-                className={`btn btn-sm ${period === p ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '4px 12px', fontSize: '0.78rem', fontWeight: 700, height: 'auto' }}
-                onClick={() => setPeriod(p)}
-              >
-                {p === 'Week' ? t('period.week', 'Week') : p === 'Month' ? t('period.month', 'Month') : t('period.year', 'Year')}
-              </button>
-            ))}
-          </div>
+        {/* Recent prices badge (replaces the old Week/Month/Year filter -
+            the underlying data source only has recent reported prices,
+            not real historical ranges, so a period filter would be
+            misleading) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="badge badge-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.78rem' }}>
+            <Calendar size={13} /> {t('mandi.recentPrices', 'Recent mandi prices')}
+          </span>
         </div>
       </div>
 
