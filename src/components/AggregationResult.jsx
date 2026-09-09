@@ -22,12 +22,12 @@ export default function AggregationResult({
   requirement = {
     produce: 'Produce',
     emoji: '🌾',
-    requiredQuantity: 1000,
     quality: 'Grade A',
     maxPrice: 2800,
     delivery: 'Central Distribution Center'
   },
   initialSuppliers = [],
+  matchScore = 0,
   onCreateOrder,
   onSendOffers
 }) {
@@ -64,9 +64,10 @@ export default function AggregationResult({
   }
 
   // Dynamic calculations
-  const { matchedQuantity, totalCost, avgPrice, avgDistance, matchedSuppliersCount, isFullyMatched, remainingShortfall } = useMemo(() => {
+  const { matchedQuantity, requiredTarget, totalCost, avgPrice, avgDistance, matchedSuppliersCount, isFullyMatched, remainingShortfall } = useMemo(() => {
     const activeSuppliers = initialSuppliers.filter((s) => selectedIds.includes(s.id));
     const totalQty = activeSuppliers.reduce((acc, curr) => acc + curr.quantity, 0);
+    const target = Number(requirement.requiredQuantity) || 0;
     
     // Each price is in ₹ / quintal (1 quintal = 100 kg)
     const cost = activeSuppliers.reduce((acc, curr) => {
@@ -85,8 +86,9 @@ export default function AggregationResult({
       avgPrice: averagePricePerQuintal,
       avgDistance: averageDist,
       matchedSuppliersCount: activeSuppliers.length,
-      isFullyMatched: totalQty >= requirement.requiredQuantity,
-      remainingShortfall: Math.max(0, requirement.requiredQuantity - totalQty)
+      requiredTarget: target,
+      isFullyMatched: target > 0 && totalQty >= target,
+      remainingShortfall: Math.max(0, target - totalQty)
     };
   }, [selectedIds, initialSuppliers, requirement]);
 
@@ -126,7 +128,7 @@ export default function AggregationResult({
           <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--neutral-900)' }}>
             {isFullyMatched ? (
               <span style={{ color: 'var(--primary-700)' }}>
-                ✓ {(requirement.requiredQuantity || 0).toLocaleString()} kg {t('aggregation.targetMet', '100% Target Met!')}
+                ✓ {requiredTarget.toLocaleString()} / {requiredTarget.toLocaleString()} kg {t('aggregation.targetMet', '100% Target Met!')}
               </span>
             ) : (
               <span style={{ color: '#d97706' }}>
@@ -140,14 +142,14 @@ export default function AggregationResult({
           </p>
         </div>
 
-        <MatchScore score={isFullyMatched ? 92 : 74} />
+        <MatchScore score={matchScore} />
       </div>
 
       {/* Progress visualizer */}
       <div style={{ margin: '16px 0 24px' }}>
         <ProgressBar 
           current={matchedQuantity || 0} 
-          total={requirement.requiredQuantity || 0} 
+          total={requiredTarget} 
           unit="kg" 
         />
       </div>
@@ -156,10 +158,10 @@ export default function AggregationResult({
       <div className="agg-metrics-grid">
         <div className="agg-metric-item">
           <span className="agg-metric-label">{t('aggregation.requiredTarget', 'Required Target')}</span>
-          <span className="agg-metric-val">{(requirement.requiredQuantity || 0).toLocaleString()} kg</span>
+          <span className="agg-metric-val">{requiredTarget.toLocaleString()} kg</span>
         </div>
         <div className="agg-metric-item">
-          <span className="agg-metric-label">{t('aggregation.matchedStock', 'Matched Stock')}</span>
+          <span className="agg-metric-label">{t('aggregation.matchedStock', 'Matched Stock Available')}</span>
           <span className="agg-metric-val" style={{ color: isFullyMatched ? 'var(--primary-700)' : '#d97706' }}>
             {(matchedQuantity || 0).toLocaleString()} kg
           </span>

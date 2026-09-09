@@ -17,6 +17,7 @@ import StatCard from '../components/StatCard';
 import AggregationResult from '../components/AggregationResult';
 import DashboardMandiPriceGraph from '../components/DashboardMandiPriceGraph';
 import { useLanguage } from '../context/LanguageContext';
+import { computeDemandMatch } from '../utils/matching';
 
 export default function BuyerDashboard({ 
   buyerName = '',
@@ -35,6 +36,7 @@ export default function BuyerDashboard({
   const pendingOffersCount = offers.filter((o) => o.status === 'Pending').length;
 
   const topDemand = buyerDemands[0];
+  const matchResult = topDemand ? computeDemandMatch(topDemand, farmerListings) : { score: 0 };
   const matchedSuppliers = topDemand 
     ? farmerListings
         .filter(f => !topDemand.produce || (f.produce || '').toLowerCase() === (topDemand.produce || '').toLowerCase())
@@ -126,12 +128,13 @@ export default function BuyerDashboard({
             requirement={{
               produce: buyerDemands[0].produce || 'Tomatoes',
               emoji: buyerDemands[0].emoji || '🍅',
-              requiredQuantity: buyerDemands[0].requiredQuantity || 1000,
+              requiredQuantity: buyerDemands[0].requiredQuantity || 0,
               quality: buyerDemands[0].quality || 'Grade A',
               maxPrice: buyerDemands[0].maxPrice || 2800,
               delivery: buyerDemands[0].delivery || buyerDemands[0].location || 'Central Distribution Center'
             }}
             initialSuppliers={matchedSuppliers}
+            matchScore={matchResult.score}
             onCreateOrder={(order) => {
               if (onLaunchAggregation) onLaunchAggregation(order);
             }}

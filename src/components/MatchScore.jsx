@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle2, Sparkles } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function MatchScore({ score = 92, factors = [] }) {
+export default function MatchScore({ score = 0, factors = [] }) {
   const { t } = useLanguage();
 
   const defaultFactors = [

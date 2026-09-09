@@ -4,6 +4,7 @@ import AggregationResult from '../components/AggregationResult';
 import { useLanguage } from '../context/LanguageContext';
 import { COMMODITIES, getCommodityEmoji } from '../constants/commodities';
 import { ALL_MARKETS } from '../constants/locations';
+import { computeDemandMatch } from '../utils/matching';
 
 export default function CreateRequirement({ 
   farmerListings = [],
@@ -41,6 +42,7 @@ export default function CreateRequirement({
       distanceKm: f.distanceKm || 30,
       phone: f.phone || '+91 98765 43210'
     }));
+  const matchScore = computeDemandMatch(formData, farmerListings).score;
 
   const produceEmojiMap = {
     Tomatoes: '🍅',
@@ -250,6 +252,7 @@ export default function CreateRequirement({
           <AggregationResult 
             requirement={formData}
             initialSuppliers={matchedSuppliers}
+            matchScore={matchScore}
             onCreateOrder={(order) => {
               if (onCreateAggregatedOrder) onCreateAggregatedOrder(order);
             }}
