@@ -129,7 +129,8 @@ export default function App() {
   const loadDatabaseData = async () => {
     try {
       // 1. Fetch Produce Listings from SQLite
-      const produceRes = await authFetch('/api/produce');
+      const produceEndpoint = currentRole === 'farmer' ? '/api/farmer/produce-listings' : '/api/produce';
+      const produceRes = await authFetch(produceEndpoint);
       if (produceRes.ok) {
         const produceJson = await produceRes.json();
         const rawListings = produceJson.listings || [];
@@ -744,7 +745,6 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          farmer_id: currentUser.id || 'farmer-1',
           crop_name: newProduce.produce,
           quantity: newProduce.quantity,
           quantity_unit: newProduce.unit || 'kg',
@@ -775,7 +775,6 @@ export default function App() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          farmer_id: currentUser.id || 'farmer-1',
           crop_name: updated.produce,
           quantity: updated.quantity,
           expected_price: updated.expectedPrice,
@@ -793,7 +792,7 @@ export default function App() {
 
   const handleDeleteProduce = async (id) => {
     try {
-      await authFetch(`/api/produce/${id}?farmerId=${currentUser.id || 'farmer-1'}`, {
+      await authFetch(`/api/produce/${id}`, {
         method: 'DELETE',
       });
       loadDatabaseData();

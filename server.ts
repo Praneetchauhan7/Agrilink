@@ -1043,10 +1043,24 @@ app.put("/api/users/:id", requireAuth, async (req, res) => {
 // ----------------------------------------------------
 // 4. API: PRODUCE LISTINGS (Farmer Catalog & Search)
 // ----------------------------------------------------
+app.get("/api/farmer/produce-listings", requireAuth, async (req, res) => {
+  try {
+    const actor = (req as any).user;
+    if (actor.role !== "farmer") {
+      return res.status(403).json({ success: false, message: "Only farmer accounts can view their produce listings." });
+    }
+
+    const listings = await getProduceListings({ farmerId: actor.id });
+    return res.json({ success: true, count: listings.length, listings, produce: listings });
+  } catch (error: any) {
+    console.error("Error fetching farmer produce listings:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.get("/api/produce", async (req, res) => {
   try {
     const {
-      farmerId,
       status,
       crop,
       commodity,
@@ -1062,7 +1076,6 @@ app.get("/api/produce", async (req, res) => {
     } = req.query;
 
     const listings = await getProduceListings({
-      farmerId: farmerId as string,
       status: status as string,
       crop: (crop as string) || (commodity as string),
       commodity: commodity as string,
@@ -1167,10 +1180,22 @@ app.post("/api/produce", requireAuth, async (req, res) => {
 
 app.put("/api/produce/:id", requireAuth, async (req, res) => {
   try {
-    const fId = (req as any).user.id;
-    const updated = await updateProduceListing(req.params.id, fId, req.body);
+    const actor = (req as any).user;
+    if (actor.role !== "farmer") {
+      return res.status(403).json({ success: false, message: "Only farmer accounts can update produce listings." });
+    }
+
+    const listing = await getProduceListingById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ success: false, message: "Listing not found" });
+    }
+    if (listing.farmer_id !== actor.id) {
+      return res.status(403).json({ success: false, message: "You can only update your own listings" });
+    }
+
+    const updated = await updateProduceListing(req.params.id, actor.id, req.body);
     if (!updated) {
-      return res.status(404).json({ success: false, message: "Listing not found, or you don't own this listing" });
+      return res.status(404).json({ success: false, message: "Listing not found" });
     }
     return res.json({ success: true, message: "Listing updated successfully", listing: updated });
   } catch (error: any) {
@@ -1181,10 +1206,22 @@ app.put("/api/produce/:id", requireAuth, async (req, res) => {
 
 app.delete("/api/produce/:id", requireAuth, async (req, res) => {
   try {
-    const farmerId = (req as any).user.id;
-    const success = await deleteProduceListing(req.params.id, farmerId);
+    const actor = (req as any).user;
+    if (actor.role !== "farmer") {
+      return res.status(403).json({ success: false, message: "Only farmer accounts can delete produce listings." });
+    }
+
+    const listing = await getProduceListingById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ success: false, message: "Listing not found" });
+    }
+    if (listing.farmer_id !== actor.id) {
+      return res.status(403).json({ success: false, message: "You can only delete your own listings" });
+    }
+
+    const success = await deleteProduceListing(req.params.id, actor.id);
     if (!success) {
-      return res.status(404).json({ success: false, message: "Listing not found or unauthorized" });
+      return res.status(404).json({ success: false, message: "Listing not found" });
     }
     return res.json({ success: true, message: "Listing removed successfully" });
   } catch (error: any) {
