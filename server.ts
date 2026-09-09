@@ -754,6 +754,10 @@ function verifyAuthToken(req: express.Request): { id: string; role: string; name
   }
 }
 
+function isValidMobile(mobile: unknown): mobile is string {
+  return typeof mobile === "string" && /^\d{10}$/.test(mobile.trim());
+}
+
 // Required Auth Middleware - verifies a real JWT. No fallback headers/query
 // params are accepted for identity: those were a spoofable impersonation
 // bypass (anyone could act as any user by just sending their ID) and have
@@ -798,11 +802,14 @@ app.post("/api/auth/register", async (req, res) => {
       return res.status(400).json({ success: false, message: "Password must be at least 4 characters" });
     }
 
-    if (role === "farmer" && (!mobile || !mobile.trim())) {
+    if (role === "farmer" && !isValidMobile(mobile)) {
       return res.status(400).json({ success: false, message: "A valid mobile number is required for Farmer registration" });
     }
     if (role === "buyer" && !email && !mobile) {
       return res.status(400).json({ success: false, message: "Email or mobile number is required for Buyer registration" });
+    }
+    if (mobile !== undefined && mobile !== null && !isValidMobile(mobile)) {
+      return res.status(400).json({ success: false, message: "Mobile number must contain exactly 10 digits" });
     }
 
     // Check if user already exists
@@ -862,6 +869,10 @@ app.post("/api/auth/login", async (req, res) => {
         success: false,
         message: "Mobile number or email identifier is required",
       });
+    }
+
+    if (!userIdentifier.includes("@") && !isValidMobile(userIdentifier)) {
+      return res.status(400).json({ success: false, message: "Mobile number must contain exactly 10 digits" });
     }
 
     if (!password || password.length < 4) {
@@ -950,6 +961,10 @@ app.put("/api/auth/profile", requireAuth, async (req, res) => {
       business_type,
       location,
     } = req.body;
+
+    if (mobile !== undefined && mobile !== null && !isValidMobile(mobile)) {
+      return res.status(400).json({ success: false, message: "Mobile number must contain exactly 10 digits" });
+    }
 
     const updatedUser = await updateUser(userId, {
       name: name !== undefined ? name.trim() : user.name,

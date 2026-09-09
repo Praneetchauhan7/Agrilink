@@ -176,8 +176,8 @@ export default function Landing({
     if (!farmerForm.name.trim()) {
       errors.name = 'Please enter your name';
     }
-    const cleanMobile = farmerForm.mobile.replace(/\D/g, '');
-    if (!cleanMobile || cleanMobile.length !== 10) {
+    const cleanMobile = farmerForm.mobile.trim();
+    if (!/^\d{10}$/.test(cleanMobile)) {
       errors.mobile = 'Please enter a valid 10-digit mobile number';
     }
     if (!farmerForm.password || farmerForm.password.length < 4) {
@@ -258,6 +258,8 @@ export default function Landing({
     }
     if (!buyerForm.identifier.trim()) {
       errors.identifier = 'Please enter your Email or Mobile Number';
+    } else if (!buyerForm.identifier.includes('@') && !/^\d{10}$/.test(buyerForm.identifier.trim())) {
+      errors.identifier = 'Please enter a valid 10-digit mobile number';
     }
     if (!buyerForm.password || buyerForm.password.length < 4) {
       errors.password = 'Password must be at least 4 characters';
@@ -287,7 +289,7 @@ export default function Landing({
         name: buyerForm.name.trim(),
         organization_name: buyerForm.name.trim(),
         email: isEmail ? buyerForm.identifier.trim() : undefined,
-        mobile: !isEmail ? buyerForm.identifier.replace(/\D/g, '') : undefined,
+        mobile: !isEmail ? buyerForm.identifier.trim() : undefined,
         identifier: buyerForm.identifier.trim(),
         password: buyerForm.password,
         state: buyerForm.state,
