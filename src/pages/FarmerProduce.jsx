@@ -115,7 +115,6 @@ export default function FarmerProduce({
         status: 'Active',
         distanceKm: 0,
         type: 'Farmer',
-        rating: 5.0,
         phone: currentUser?.mobile || ''
       });
     }

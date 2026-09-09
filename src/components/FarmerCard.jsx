@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, CheckCircle, PlusCircle, Star, Phone, ShieldCheck, Users, ShoppingCart } from 'lucide-react';
+import { MapPin, CheckCircle, PlusCircle, Phone, ShieldCheck, Users, ShoppingCart } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function FarmerCard({ 
@@ -15,24 +15,17 @@ export default function FarmerCard({
 
   return (
     <div className={`card ${isSelected ? 'border-primary' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{farmer.farmerName || farmer.name}</h4>
-            <span className={`badge ${isFPO ? 'badge-info' : 'badge-neutral'}`}>
-              {isFPO ? <><Users size={12} /> {t('common.fpo', 'FPO')}</> : t('common.farmer', 'Farmer')}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--neutral-500)', marginTop: 4 }}>
-            <MapPin size={13} />
-            <span>{farmer.location}</span>
-            {farmer.distanceKm && <span>• {farmer.distanceKm} {t('common.kmAway', 'km away')}</span>}
-          </div>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h4 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{farmer.farmerName || farmer.name}</h4>
+          <span className={`badge ${isFPO ? 'badge-info' : 'badge-neutral'}`}>
+            {isFPO ? <><Users size={12} /> {t('common.fpo', 'FPO')}</> : t('common.farmer', 'Farmer')}
+          </span>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fef3c7', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: 700, color: '#92400e' }}>
-          <Star size={12} fill="#f59e0b" color="#f59e0b" />
-          <span>{farmer.rating || '4.9'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--neutral-500)', marginTop: 4 }}>
+          <MapPin size={13} />
+          <span>{farmer.location}</span>
+          {farmer.distanceKm && <span>• {farmer.distanceKm} {t('common.kmAway', 'km away')}</span>}
         </div>
       </div>
 
