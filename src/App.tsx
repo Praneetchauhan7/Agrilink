@@ -1173,6 +1173,7 @@ export default function App() {
                   <MarketPricesPage 
                     marketPrices={marketPrices}
                     searchQuery={searchQuery}
+                    role="farmer"
                   />
                 )}
 
