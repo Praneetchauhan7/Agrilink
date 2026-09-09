@@ -35,7 +35,7 @@ import CartModal from './components/CartModal';
 // remember to do it. Falls back to a plain, unauthenticated fetch if
 // there's no token (e.g. login/register calls, or public read-only routes).
 async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem('agrilink_token');
+  const token = localStorage.getItem('kisansetu_token');
   if (!token) {
     return fetch(input, init);
   }
@@ -1227,7 +1227,7 @@ export default function App() {
                     farmerName={currentUser?.name || "Farmer"}
                     onUpdateUser={(user) => {
                       setCurrentUser(user);
-                      localStorage.setItem('agrilink_user', JSON.stringify(user));
+                      localStorage.setItem('kisansetu_user', JSON.stringify(user));
                     }}
                     onLogout={handleLogout}
                   />
@@ -1344,7 +1344,7 @@ export default function App() {
                     buyerName={currentUser?.name || "Buyer"}
                     onUpdateUser={(user) => {
                       setCurrentUser(user);
-                      localStorage.setItem('agrilink_user', JSON.stringify(user));
+                      localStorage.setItem('kisansetu_user', JSON.stringify(user));
                     }}
                     onLogout={handleLogout}
                   />

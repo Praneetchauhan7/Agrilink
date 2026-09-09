@@ -37,7 +37,7 @@ export default function NegotiationHistoryModal({
     if (!offer?.id) return;
     setLoading(true);
     setErrorMsg(null);
-    const token = localStorage.getItem('agrilink_token');
+    const token = localStorage.getItem('kisansetu_token');
     fetch(`/api/offers/${offer.id}/history`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -92,7 +92,7 @@ export default function NegotiationHistoryModal({
       });
       setShowCounterForm(false);
       // Reload history
-      const token = localStorage.getItem('agrilink_token');
+      const token = localStorage.getItem('kisansetu_token');
       const res = await fetch(`/api/offers/${offer.id}/history`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

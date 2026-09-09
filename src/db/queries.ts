@@ -1779,6 +1779,7 @@ export async function checkoutCart(buyerId: string, itemIds?: string[]) {
       delivery_location: 'Buyer Warehouse / Processing Center',
       transporter_name: 'KisanSetu Express Logistics',
       status: 'pending',
+    });
 
     // 3. Create transaction record for procurement contract & escrow flow
     const txId = `tx_${crypto.randomUUID().slice(0, 12)}`;
