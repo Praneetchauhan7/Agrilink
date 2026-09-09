@@ -58,3 +58,16 @@ export function getCommodityEmoji(commodityName) {
   }
   return '🌱';
 }
+
+export function getProductIconKey(produce = '', category = '') {
+  const rawValue = `${produce || ''} ${category || ''}`.toLowerCase();
+  if (!rawValue.trim()) return 'sprout';
+
+  if (/wheat|rice|grain|cereal|maize|bajra|jowar|millet/.test(rawValue)) return 'wheat';
+  if (/potato|onion|tomato|vegetable|carrot|garlic|ginger|chilli|cabbage|cauliflower|capsicum|brinjal|spinach|peas|bean/.test(rawValue)) return 'carrot';
+  if (/fruit|grape|banana|mango|pomegranate|apple|orange|papaya|guava|lemon/.test(rawValue)) return 'apple';
+  if (/pulse|dal|chana|tur|arhar|moong|urad|masoor|soybean|mustard|groundnut|cotton|oilseed|turmeric|spice|flower/.test(rawValue)) return 'leaf';
+  if (/flower|cotton|turmeric|spice/.test(rawValue)) return 'flower-2';
+
+  return 'sprout';
+}

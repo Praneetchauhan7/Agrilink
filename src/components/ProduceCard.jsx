@@ -1,6 +1,35 @@
 import React from 'react';
-import { Calendar, Warehouse, MapPin, Edit3, Trash2, Eye } from 'lucide-react';
+import {
+  Calendar,
+  Warehouse,
+  MapPin,
+  Edit3,
+  Trash2,
+  Eye,
+  Sprout,
+  Wheat,
+  Apple,
+  Carrot,
+  Leaf,
+  Flower2
+} from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { getProductIconKey } from '../constants/commodities';
+
+const PRODUCT_ICON_MAP = {
+  sprout: Sprout,
+  wheat: Wheat,
+  apple: Apple,
+  carrot: Carrot,
+  leaf: Leaf,
+  'flower-2': Flower2,
+};
+
+function ProductTypeIcon({ item }) {
+  const Icon = PRODUCT_ICON_MAP[getProductIconKey(item?.produce, item?.category)] || Sprout;
+
+  return <Icon size={18} style={{ color: 'var(--primary-700)' }} />;
+}
 
 export default function ProduceCard({ item, onEdit, onDelete, onViewOffers }) {
   const { t } = useLanguage();
@@ -10,7 +39,7 @@ export default function ProduceCard({ item, onEdit, onDelete, onViewOffers }) {
       <div className="produce-card-header">
         <div className="produce-title-group">
           <div className="produce-emoji-box">
-            {item.emoji || '🌱'}
+            <ProductTypeIcon item={item} />
           </div>
           <div>
             <div className="produce-name">{item.produce}</div>
