@@ -1110,6 +1110,20 @@ app.get("/api/farmer/:productId/mandi-matches", requireAuth, async (req, res) =>
   }
 });
 
+// Produce listings are publicly browsable (no login required, by design -
+// it's a marketplace), but the farmer's raw phone number should only be
+// visible to someone who's actually signed in, not to anonymous scrapers
+// hitting the API directly. Logged-in users (buyer or farmer, any role)
+// still see it, since that's needed for the existing "contact farmer" flow.
+function sanitizeListingsForViewer(listings: any[], req: express.Request) {
+  const viewer = verifyAuthToken(req);
+  if (viewer) return listings;
+  return listings.map((l) => {
+    const { farmer_mobile, ...rest } = l;
+    return rest;
+  });
+}
+
 app.get("/api/produce", async (req, res) => {
   try {
     const {
@@ -1141,7 +1155,12 @@ app.get("/api/produce", async (req, res) => {
       minPrice: minPrice !== undefined ? Number(minPrice) : undefined,
       maxPrice: maxPrice !== undefined ? Number(maxPrice) : undefined,
     });
-    return res.json({ success: true, count: listings.length, listings, produce: listings });
+    return res.json({
+      success: true,
+      count: listings.length,
+      listings: sanitizeListingsForViewer(listings, req),
+      produce: sanitizeListingsForViewer(listings, req),
+    });
   } catch (error: any) {
     console.error("Error fetching produce listings:", error);
     return res.status(500).json({ success: false, message: error.message });
@@ -1153,7 +1172,7 @@ app.get("/api/produce/:id", async (req, res) => {
   if (!listing) {
     return res.status(404).json({ success: false, message: "Produce listing not found" });
   }
-  return res.json({ success: true, listing });
+  return res.json({ success: true, listing: sanitizeListingsForViewer([listing], req)[0] });
 });
 
 app.post("/api/produce", requireAuth, async (req, res) => {
