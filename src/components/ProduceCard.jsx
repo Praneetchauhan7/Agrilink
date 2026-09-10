@@ -14,7 +14,8 @@ import {
   Flower2,
   CircleDot,
   Cherry,
-  Citrus
+  Citrus,
+  Store
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { getProductIconKey } from '../constants/commodities';
@@ -60,7 +61,7 @@ function ProductTypeIcon({ item }) {
   );
 }
 
-export default function ProduceCard({ item, onEdit, onDelete, onViewOffers }) {
+export default function ProduceCard({ item, onEdit, onDelete, onViewOffers, onFindMandiMatches }) {
   const { t } = useLanguage();
 
   return (
@@ -120,6 +121,11 @@ export default function ProduceCard({ item, onEdit, onDelete, onViewOffers }) {
       </div>
 
       <div className="produce-card-footer">
+        {onFindMandiMatches && (
+          <button className="btn btn-outline-primary btn-sm" onClick={() => onFindMandiMatches(item)}>
+            <Store size={14} /> Find Mandi Matches
+          </button>
+        )}
         {onViewOffers && (
           <button className="btn btn-outline-primary btn-sm" onClick={() => onViewOffers(item)}>
             <Eye size={14} /> {t('btn.viewOffers', 'View Offers')}

@@ -424,6 +424,15 @@ export default function App() {
     }
   };
 
+  const handleFindMandiMatches = async (productId: string) => {
+    const response = await authFetch(`/api/farmer/${productId}/mandi-matches`);
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Unable to find mandi matches');
+    }
+    return data.matches || [];
+  };
+
   const handleRemoveCartItem = async (itemId: string) => {
     try {
       const res = await authFetch(`/api/cart/${itemId}`, {
@@ -1165,6 +1174,7 @@ export default function App() {
                     onDeleteProduce={handleDeleteProduce}
                     onAcceptOffer={handleAcceptOffer}
                     onRejectOffer={handleRejectOffer}
+                    onFindMandiMatches={handleFindMandiMatches}
                   />
                 )}
 

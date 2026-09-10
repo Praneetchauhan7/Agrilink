@@ -23,12 +23,17 @@ export default function FarmerProduce({
   onEditProduce, 
   onDeleteProduce,
   onAcceptOffer,
-  onRejectOffer
+  onRejectOffer,
+  onFindMandiMatches
 }) {
   const { t } = useLanguage();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedProduceForOffers, setSelectedProduceForOffers] = useState(null);
+  const [selectedProduceForMatches, setSelectedProduceForMatches] = useState(null);
+  const [mandiMatches, setMandiMatches] = useState([]);
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+  const [matchError, setMatchError] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -121,6 +126,21 @@ export default function FarmerProduce({
     setIsModalOpen(false);
   };
 
+  const handleViewMandiMatches = async (listing) => {
+    setSelectedProduceForMatches(listing);
+    setMandiMatches([]);
+    setMatchError('');
+    setIsLoadingMatches(true);
+    try {
+      const matches = await onFindMandiMatches(listing.id);
+      setMandiMatches(matches);
+    } catch (error) {
+      setMatchError(error.message || 'Unable to find mandi matches');
+    } finally {
+      setIsLoadingMatches(false);
+    }
+  };
+
   const filteredListings = produceListings.filter((item) => {
     const matchesFilter = filterType === 'All' || item.produce === filterType;
     const matchesSearch = item.produce.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -189,9 +209,41 @@ export default function FarmerProduce({
               onEdit={handleOpenEditModal}
               onDelete={onDeleteProduce}
               onViewOffers={(prod) => setSelectedProduceForOffers(prod)}
+              onFindMandiMatches={onFindMandiMatches ? handleViewMandiMatches : undefined}
             />
           ))}
         </div>
+      )}
+
+      {selectedProduceForMatches && (
+        <Modal
+          isOpen={!!selectedProduceForMatches}
+          onClose={() => setSelectedProduceForMatches(null)}
+          title={`Mandi matches for ${selectedProduceForMatches.produce}`}
+        >
+          {isLoadingMatches ? (
+            <p style={{ padding: 24, textAlign: 'center', color: 'var(--neutral-500)' }}>Finding the best mandi houses...</p>
+          ) : matchError ? (
+            <p style={{ padding: 24, color: 'var(--danger-700)' }}>{matchError}</p>
+          ) : mandiMatches.length === 0 ? (
+            <p style={{ padding: 24, textAlign: 'center', color: 'var(--neutral-500)' }}>No mandi matches found for this listing.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {mandiMatches.map((mandi) => (
+                <div key={mandi.id} style={{ border: '1px solid var(--neutral-200)', borderRadius: 'var(--radius-md)', padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                    <div>
+                      <strong>{mandi.name}</strong>
+                      <div style={{ color: 'var(--neutral-500)', fontSize: '0.8rem', marginTop: 3 }}>{mandi.district}, {mandi.state}</div>
+                    </div>
+                    <span className="badge badge-success">{mandi.match_score}% match</span>
+                  </div>
+                  <div style={{ color: 'var(--neutral-600)', fontSize: '0.8rem', marginTop: 8 }}>{mandi.match_reasons.join(' • ')}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
       )}
 
       {/* Offers for Produce Modal */}

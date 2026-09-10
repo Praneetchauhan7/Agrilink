@@ -55,6 +55,7 @@ import {
   clearCart,
   checkoutCart,
 } from "./src/db/queries";
+import { findMatchingMandiHouses } from "./src/services/matchingService";
 
 dotenv.config();
 
@@ -1077,6 +1078,32 @@ app.get("/api/farmer/produce-listings/:id", requireAuth, async (req, res) => {
   } catch (error: any) {
     console.error("Error fetching farmer produce listing:", error);
     return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get("/api/farmer/:productId/mandi-matches", requireAuth, async (req, res) => {
+  try {
+    const actor = (req as any).user;
+    if (actor.role !== "farmer") {
+      return res.status(403).json({ success: false, message: "Only farmer accounts can request mandi matches." });
+    }
+
+    const listing = await getProduceListingById(req.params.productId);
+    if (!listing) {
+      return res.status(404).json({ success: false, message: "Produce listing not found" });
+    }
+    if (listing.farmer_id !== actor.id) {
+      return res.status(403).json({ success: false, message: "You can only match your own produce listings" });
+    }
+
+    return res.json({
+      success: true,
+      product: listing,
+      matches: findMatchingMandiHouses(listing),
+    });
+  } catch (error: any) {
+    console.error("Mandi matching error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Unable to find mandi matches" });
   }
 });
 
