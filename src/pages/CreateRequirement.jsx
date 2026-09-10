@@ -6,6 +6,35 @@ import { COMMODITIES, getCommodityEmoji } from '../constants/commodities';
 import { ALL_MARKETS } from '../constants/locations';
 import { computeDemandMatch } from '../utils/matching';
 
+const normalize = (value) => (value || '').toString().toLowerCase().trim();
+const qualityRank = { 'grade c': 1, 'grade b': 2, 'grade a': 3, premium: 4 };
+
+function scoreSupplier(supplier, requirement) {
+  const produceMatch = normalize(supplier.produce) === normalize(requirement.produce);
+  if (!produceMatch) return { score: 0, factors: [] };
+
+  const quantity = Number(requirement.requiredQuantity) || 0;
+  const quantityRatio = quantity > 0 ? Math.min((Number(supplier.quantity) || 0) / quantity, 1) : 1;
+  const qualityMatch = (qualityRank[normalize(supplier.quality)] || 0) >= (qualityRank[normalize(requirement.quality)] || 0);
+  const targetPrice = Number(requirement.maxPrice) || 0;
+  const supplierPrice = Number(supplier.price) || 0;
+  const priceMatch = targetPrice > 0 && supplierPrice > 0 && supplierPrice <= targetPrice;
+  const requirementLocation = normalize(requirement.delivery).split(',')[0];
+  const supplierLocation = normalize(supplier.location).split(',')[0];
+  const locationMatch = requirementLocation && supplierLocation && (requirementLocation === supplierLocation || normalize(supplier.location).includes(requirementLocation));
+
+  return {
+    score: Math.min(100, Math.round(40 + quantityRatio * 20 + (qualityMatch ? 15 : 6) + (priceMatch ? 15 : 5) + (locationMatch ? 10 : 3))),
+    factors: [
+      { label: 'Produce Match', matched: true },
+      { label: 'Quantity Match', matched: quantityRatio >= 0.9 },
+      { label: 'Quality Match', matched: qualityMatch },
+      { label: 'Price Match', matched: priceMatch },
+      { label: 'Location Match', matched: locationMatch }
+    ]
+  };
+}
+
 export default function CreateRequirement({ 
   farmerListings = [],
   onCreateRequirementAndAggregate = () => {},
@@ -31,7 +60,8 @@ export default function CreateRequirement({
 
   const matchedSuppliers = farmerListings
     .filter(f => !formData.produce || (f.produce || '').toLowerCase() === formData.produce.toLowerCase())
-    .map(f => ({
+    .map(f => {
+      const supplier = {
       id: f.id,
       name: f.farmerName,
       location: f.location,
@@ -41,7 +71,10 @@ export default function CreateRequirement({
       type: f.type || 'Farmer',
       distanceKm: f.distanceKm || 30,
       phone: f.phone || '+91 98765 43210'
-    }));
+      };
+      return { ...supplier, ...scoreSupplier(supplier, formData) };
+    })
+    .sort((a, b) => b.score - a.score);
   const matchScore = computeDemandMatch(formData, farmerListings).score;
 
   const produceEmojiMap = {

@@ -18,6 +18,12 @@ import ProgressBar from './ProgressBar';
 import MatchScore from './MatchScore';
 import { useLanguage } from '../context/LanguageContext';
 
+const getSupplierFitBand = (score) => {
+  if (score >= 80) return { label: 'Best fit', color: 'var(--primary-700)' };
+  if (score >= 60) return { label: 'Good fit', color: '#0369a1' };
+  return { label: 'Partial fit', color: '#b45309' };
+};
+
 export default function AggregationResult({ 
   requirement = {
     produce: 'Produce',
@@ -224,44 +230,57 @@ export default function AggregationResult({
             {initialSuppliers.map((supplier, index) => {
               const isSelected = selectedIds.includes(supplier.id);
               const subtotal = Math.round((supplier.quantity / 100) * supplier.price);
+              const fitBand = getSupplierFitBand(supplier.score || 0);
+              const previousBand = index > 0 ? getSupplierFitBand(initialSuppliers[index - 1].score || 0).label : null;
 
               return (
-                <tr 
-                  key={supplier.id} 
-                  className={isSelected ? 'supplier-row-selected' : 'supplier-row-unselected'}
-                  style={{ cursor: showAdjustMode ? 'pointer' : 'default' }}
-                  onClick={() => showAdjustMode && toggleSupplier(supplier.id)}
-                >
-                  {showAdjustMode && (
-                    <td>
-                      {isSelected ? (
-                        <CheckSquare size={18} style={{ color: 'var(--primary-600)' }} />
-                      ) : (
-                        <Square size={18} style={{ color: 'var(--neutral-400)' }} />
-                      )}
-                    </td>
+                <React.Fragment key={supplier.id}>
+                  {fitBand.label !== previousBand && (
+                    <tr>
+                      <td colSpan={showAdjustMode ? 10 : 9} style={{ padding: '12px 10px 6px', color: fitBand.color, fontSize: '0.76rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: 0 }}>
+                        {fitBand.label}
+                      </td>
+                    </tr>
                   )}
-                  <td style={{ fontWeight: 700, color: 'var(--neutral-500)' }}>{index + 1}.</td>
-                  <td>
-                    <div style={{ fontWeight: 800, color: 'var(--neutral-900)' }}>{supplier.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>{supplier.phone}</div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <MapPin size={13} style={{ color: 'var(--neutral-400)' }} />
-                      <span>{supplier.location}</span>
-                    </div>
-                  </td>
-                  <td style={{ fontWeight: 800 }}>{supplier.quantity.toLocaleString()} kg</td>
-                  <td style={{ fontWeight: 700, color: 'var(--primary-700)' }}>₹{supplier.price.toLocaleString()} /{t('unit.quintalShort', 'q')}</td>
-                  <td><span className="badge badge-grade">{supplier.grade}</span></td>
-                  <td style={{ fontWeight: 800 }}>₹{subtotal.toLocaleString()}</td>
-                  <td>
-                    <span className={`badge ${supplier.type === 'FPO' ? 'badge-info' : 'badge-neutral'}`}>
-                      {supplier.type}
-                    </span>
-                  </td>
-                </tr>
+                  <tr
+                    className={isSelected ? 'supplier-row-selected' : 'supplier-row-unselected'}
+                    style={{ cursor: showAdjustMode ? 'pointer' : 'default' }}
+                    onClick={() => showAdjustMode && toggleSupplier(supplier.id)}
+                  >
+                    {showAdjustMode && (
+                      <td>
+                        {isSelected ? (
+                          <CheckSquare size={18} style={{ color: 'var(--primary-600)' }} />
+                        ) : (
+                          <Square size={18} style={{ color: 'var(--neutral-400)' }} />
+                        )}
+                      </td>
+                    )}
+                    <td style={{ fontWeight: 700, color: 'var(--neutral-500)' }}>{index + 1}.</td>
+                    <td>
+                      <div style={{ fontWeight: 800, color: 'var(--neutral-900)' }}>{supplier.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>{supplier.phone}</div>
+                      <div style={{ marginTop: 6 }}>
+                        <MatchScore score={supplier.score || 0} factors={supplier.factors || []} />
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MapPin size={13} style={{ color: 'var(--neutral-400)' }} />
+                        <span>{supplier.location}</span>
+                      </div>
+                    </td>
+                    <td style={{ fontWeight: 800 }}>{supplier.quantity.toLocaleString()} kg</td>
+                    <td style={{ fontWeight: 700, color: 'var(--primary-700)' }}>₹{supplier.price.toLocaleString()} /{t('unit.quintalShort', 'q')}</td>
+                    <td><span className="badge badge-grade">{supplier.grade}</span></td>
+                    <td style={{ fontWeight: 800 }}>₹{subtotal.toLocaleString()}</td>
+                    <td>
+                      <span className={`badge ${supplier.type === 'FPO' ? 'badge-info' : 'badge-neutral'}`}>
+                        {supplier.type}
+                      </span>
+                    </td>
+                  </tr>
+                </React.Fragment>
               );
             })}
           </tbody>
