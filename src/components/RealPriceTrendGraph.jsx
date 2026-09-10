@@ -45,10 +45,11 @@ const STATES = [
   'West Bengal'
 ];
 
-export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMarket = '' }) {
+export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMarket = '', initialState = 'Maharashtra', initialDistrict = '' }) {
   const { t, language } = useLanguage();
   const [commodity, setCommodity] = useState(initialCrop);
-  const [state, setState] = useState('Maharashtra');
+  const [state, setState] = useState(initialState);
+  const [district, setDistrict] = useState(initialDistrict);
   const [selectedMarket, setSelectedMarket] = useState(initialMarket || 'All');
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +61,7 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
       const params = new URLSearchParams();
       if (commodity) params.append('commodity', commodity);
       if (state && state !== 'All') params.append('state', state);
+      if (district) params.append('district', district);
       if (selectedMarket && selectedMarket !== 'All') params.append('market', selectedMarket);
 
       const res = await fetch(`/api/market-price-trends?${params.toString()}`);
@@ -80,7 +82,17 @@ export default function RealPriceTrendGraph({ initialCrop = 'Tomato', initialMar
 
   useEffect(() => {
     fetchTrends();
-  }, [commodity, state, selectedMarket]);
+  }, [commodity, state, district, selectedMarket]);
+
+  useEffect(() => {
+    setCommodity(initialCrop);
+  }, [initialCrop]);
+
+  useEffect(() => {
+    setState(initialState);
+    setDistrict(initialDistrict);
+    setSelectedMarket(initialMarket || 'All');
+  }, [initialState, initialDistrict, initialMarket]);
 
   const rawRecords = (data?.records || []).filter((r) => {
     if (selectedMarket && selectedMarket !== 'All') {

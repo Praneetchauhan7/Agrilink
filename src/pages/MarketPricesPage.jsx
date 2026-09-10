@@ -18,6 +18,8 @@ import {
 import PriceChart from '../components/PriceChart';
 import RealPriceTrendGraph from '../components/RealPriceTrendGraph';
 import { useLanguage } from '../context/LanguageContext';
+import { COMMODITIES } from '../constants/commodities';
+import { ALL_STATES, getDistrictsForState } from '../constants/locations';
 
 export default function MarketPricesPage({ marketPrices = {}, searchQuery = '', role = 'buyer' }) {
   const { t } = useLanguage();
@@ -51,7 +53,8 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '', 
     }
   }, [searchQuery]);
 
-  const produceList = ['Tomatoes', 'Onions', 'Potatoes', 'Wheat', 'Grapes'];
+  const produceList = COMMODITIES.map((commodity) => commodity.name);
+  const districtOptions = getDistrictsForState(queryState);
 
   // Benchmark reference records for regional APMC context
   const benchmarkMandis = [
@@ -89,7 +92,7 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '', 
 
   useEffect(() => {
     handleQueryDataGov();
-  }, [selectedCrop]);
+  }, [queryCommodity, queryState, queryDistrict]);
 
   return (
     <div className="page-content">
@@ -143,38 +146,48 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '', 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr)) auto', gap: 12, alignItems: 'end', marginBottom: 16 }}>
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>{t('marketIntelligence.commodity', 'Commodity')}</label>
-            <input
-              type="text"
+            <select
               className="form-input"
               value={queryCommodity}
-              onChange={(e) => setQueryCommodity(e.target.value)}
-              placeholder={t('marketPrices.commodityPlaceholder', 'e.g. Wheat, Tomato, Onion')}
+              onChange={(e) => {
+                setQueryCommodity(e.target.value);
+                const displayName = COMMODITIES.find((commodity) => commodity.name.replace(/s$/, '') === e.target.value)?.name;
+                if (displayName) setSelectedCrop(displayName);
+              }}
               style={{ fontSize: '0.85rem' }}
-            />
+            >
+              {COMMODITIES.map((commodity) => (
+                <option key={commodity.id} value={commodity.name.replace(/s$/, '')}>{commodity.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>{t('marketPrices.state', 'State')}</label>
-            <input
-              type="text"
+            <select
               className="form-input"
               value={queryState}
-              onChange={(e) => setQueryState(e.target.value)}
-              placeholder={t('marketPrices.statePlaceholder', 'e.g. Maharashtra, Punjab')}
+              onChange={(e) => {
+                setQueryState(e.target.value);
+                setQueryDistrict('');
+              }}
               style={{ fontSize: '0.85rem' }}
-            />
+            >
+              {ALL_STATES.map((state) => <option key={state} value={state}>{state}</option>)}
+            </select>
           </div>
 
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 700 }}>{t('marketPrices.districtOptional', 'District (Optional)')}</label>
-            <input
-              type="text"
+            <select
               className="form-input"
               value={queryDistrict}
               onChange={(e) => setQueryDistrict(e.target.value)}
-              placeholder={t('marketPrices.districtPlaceholder', 'e.g. Nashik, Pune')}
               style={{ fontSize: '0.85rem' }}
-            />
+            >
+              <option value="">{t('marketPrices.allDistricts', 'All districts')}</option>
+              {districtOptions.map((district) => <option key={district} value={district}>{district}</option>)}
+            </select>
           </div>
 
           <button 
@@ -262,6 +275,8 @@ export default function MarketPricesPage({ marketPrices = {}, searchQuery = '', 
       {/* Real Price Trend Graph - recent reported mandi prices */}
       <RealPriceTrendGraph 
         initialCrop={selectedCrop.replace(/s$/, '')} 
+        initialState={queryState}
+        initialDistrict={queryDistrict}
       />
 
       {role !== 'farmer' && (

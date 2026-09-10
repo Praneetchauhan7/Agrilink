@@ -151,6 +151,29 @@ export const offers = pgTable('offers', {
 ]);
 
 // ----------------------------------------------------
+// MESSAGES TABLE (Buyer <-> Farmer Chat, scoped to a Purchase Request/Offer)
+// ----------------------------------------------------
+export const messages = pgTable('messages', {
+  id: text('id').primaryKey(),
+  offerId: text('offer_id')
+    .notNull()
+    .references(() => offers.id, { onDelete: 'cascade' }),
+  senderId: text('sender_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  receiverId: text('receiver_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  message: text('message').notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  readAt: timestamp('read_at', { mode: 'string' }),
+}, (table) => [
+  index('idx_messages_offer').on(table.offerId),
+  index('idx_messages_sender').on(table.senderId),
+  index('idx_messages_receiver').on(table.receiverId),
+]);
+
+// ----------------------------------------------------
 // TRANSACTIONS TABLE (Farmer-Buyer Post-Acceptance Flow)
 // ----------------------------------------------------
 export const transactions = pgTable('transactions', {

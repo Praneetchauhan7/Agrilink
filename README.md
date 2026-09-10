@@ -4,8 +4,6 @@ KisanSetu is a digital agricultural marketplace connecting farmers, FPOs (Farmer
 
 The platform focuses on improving market access for farmers, reducing dependency on intermediaries, and making agricultural trade more transparent and efficient — combining multi-farmer stock aggregation with real-time market price discovery sourced from official government data.
 
-**Live Website:** [https://kisansetu-0cjn.onrender.com/](https://kisansetu-0cjn.onrender.com/)
-**Repository:** [https://github.com/Praneetchauhan7/Agrilink](https://github.com/Praneetchauhan7/Agrilink)
 
 ## 1. Project Information
 
@@ -18,7 +16,6 @@ The platform focuses on improving market access for farmers, reducing dependency
 | Repository | https://github.com/Praneetchauhan7/Agrilink |
 | Primary Goal | Connect agricultural producers with markets and improve transparency in agricultural trade, via multi-farmer stock aggregation and real-time price discovery |
 
-> **Note:** KisanSetu is currently a single responsive web application — there is no separate native or mobile-app codebase in the repository at this time. It works on mobile browsers through responsive design, but "Mobile Application" should not be listed as a distinct deliverable until a dedicated mobile client exists.
 
 ## 2. Problem Statement
 

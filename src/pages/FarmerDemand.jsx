@@ -36,6 +36,19 @@ export default function FarmerDemand({
     return map;
   }, [filteredDemands, farmerListings]);
 
+  const rankedDemands = useMemo(() => {
+    return [...filteredDemands].sort((a, b) => {
+      return (matchesByDemandId[b.id]?.score || 0) - (matchesByDemandId[a.id]?.score || 0);
+    });
+  }, [filteredDemands, matchesByDemandId]);
+
+  const getFitBand = (score) => {
+    if (score >= 80) return { label: 'Best fit', color: 'var(--primary-700)' };
+    if (score >= 60) return { label: 'Good fit', color: '#0369a1' };
+    if (score > 0) return { label: 'Partial fit', color: '#b45309' };
+    return { label: 'Needs a listing', color: 'var(--neutral-500)' };
+  };
+
   const [offerData, setOfferData] = useState({
     quantityOffered: 2500,
     offeredPrice: 2850,
@@ -97,8 +110,20 @@ export default function FarmerDemand({
         </div>
       ) : (
         <div className="cards-grid">
-          {filteredDemands.map((demand) => (
-            <div key={demand.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {rankedDemands.map((demand, index) => {
+            const match = matchesByDemandId[demand.id] || { score: 0 };
+            const fitBand = getFitBand(match.score);
+            const previousMatch = index > 0 ? matchesByDemandId[rankedDemands[index - 1].id] : null;
+            const previousBand = previousMatch ? getFitBand(previousMatch.score).label : null;
+            return (
+              <React.Fragment key={demand.id}>
+                {fitBand.label !== previousBand && (
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, marginTop: index === 0 ? 0 : 12 }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: fitBand.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{fitBand.label}</span>
+                    <span style={{ height: 1, flex: 1, background: 'var(--neutral-200)' }} />
+                  </div>
+                )}
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -115,10 +140,10 @@ export default function FarmerDemand({
                 <span className="badge badge-grade">{demand.quality}</span>
               </div>
 
-              {matchesByDemandId[demand.id]?.hasListing ? (
+              {match.hasListing ? (
                 <MatchScore
-                  score={matchesByDemandId[demand.id].score}
-                  factors={matchesByDemandId[demand.id].factors}
+                  score={match.score}
+                  factors={match.factors}
                 />
               ) : (
                 <p style={{ fontSize: '0.78rem', color: 'var(--neutral-500)', background: 'var(--neutral-50)', border: '1px dashed var(--neutral-300)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', margin: 0 }}>
@@ -171,8 +196,10 @@ export default function FarmerDemand({
                   <Send size={14} /> {t('offers.submitOffer', 'Submit Offer')}
                 </button>
               </div>
-            </div>
-          ))}
+                </div>
+              </React.Fragment>
+            );
+          })}
         </div>
       )}
 

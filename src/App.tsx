@@ -449,26 +449,29 @@ export default function App() {
   const handlePlaceOrderFromCart = async () => {
     setIsPlacingCartOrder(true);
     try {
-      const buyerId = currentUser?.id || (currentRole === 'buyer' ? 'buyer-1' : 'farmer-1');
       const res = await authFetch('/api/cart/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerId }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         await loadDatabaseData();
         await fetchCart();
+        const sentCount = data.offers?.length || 0;
+        const failedCount = data.failed?.length || 0;
         addToast(
-          'Order Placed Successfully!',
-          `${data.orders?.length || 1} procurement order(s) placed with escrow protection.`,
+          'Purchase Request Sent!',
+          failedCount > 0
+            ? `${sentCount} request(s) sent for approval. ${failedCount} item(s) could not be requested (listing may no longer be available).`
+            : `${sentCount} request(s) sent to the farmer(s) for approval. You'll be notified once they respond.`,
           'success'
         );
         setIsCartOpen(false);
-        handleNavigateTab('orders');
-        return { success: true, orders: data.orders };
+        handleNavigateTab('offers');
+        return { success: true, offers: data.offers };
       } else {
-        addToast('Checkout Failed', data.message || 'Failed to place order from cart.', 'error');
+        addToast('Request Failed', data.message || 'Failed to send purchase request from cart.', 'error');
         return { success: false };
       }
     } catch (err) {

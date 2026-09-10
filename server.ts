@@ -40,6 +40,9 @@ import {
   getUnreadNotificationCount,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  getMessagesForOffer,
+  createMessage,
+  markMessagesAsRead,
   getOrders,
   getOrderById,
   createOrder,
@@ -1611,6 +1614,58 @@ app.put("/api/offers/:id", requireAuth, async (req, res) => {
 });
 
 // ----------------------------------------------------
+// 6b. API: CHAT MESSAGES (scoped to a Purchase Request/Offer)
+// Only the buyer and farmer on a given offer can read or send messages
+// in that conversation - identity always comes from the verified token,
+// never a client-supplied id, same as every other route in this file.
+// ----------------------------------------------------
+async function assertOfferParty(offerId: string, actorId: string) {
+  const offer = await getOfferById(offerId);
+  if (!offer) {
+    throw Object.assign(new Error("Purchase request not found"), { statusCode: 404 });
+  }
+  const farmerId = (offer as any).farmer_id || (offer as any).listing_farmer_id;
+  if (actorId !== offer.buyer_id && actorId !== farmerId) {
+    throw Object.assign(new Error("You are not a party to this purchase request."), { statusCode: 403 });
+  }
+  return { offer, farmerId };
+}
+
+app.get("/api/messages/:offerId", requireAuth, async (req, res) => {
+  try {
+    const actor = (req as any).user;
+    await assertOfferParty(req.params.offerId, actor.id);
+    const messages = await getMessagesForOffer(req.params.offerId);
+    await markMessagesAsRead(req.params.offerId, actor.id);
+    return res.json({ success: true, count: messages.length, messages });
+  } catch (error: any) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/api/messages/:offerId", requireAuth, async (req, res) => {
+  try {
+    const actor = (req as any).user;
+    const { message } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, message: "Message text is required" });
+    }
+    const { offer, farmerId } = await assertOfferParty(req.params.offerId, actor.id);
+    const receiverId = actor.id === offer.buyer_id ? farmerId : offer.buyer_id;
+
+    const saved = await createMessage({
+      offer_id: req.params.offerId,
+      sender_id: actor.id,
+      receiver_id: receiverId,
+      message: message.trim(),
+    });
+    return res.status(201).json({ success: true, message: saved });
+  } catch (error: any) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+});
+
+// ----------------------------------------------------
 // 7. API: TRANSACTIONS (5-Stage Farmer-Buyer State Flow)
 // Accepted -> Payment Pending -> Payment Completed -> Delivery/Pickup -> Completed
 // ----------------------------------------------------
@@ -1938,12 +1993,12 @@ app.post("/api/cart/checkout", requireAuth, async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `Successfully placed ${result.orders.length} order(s)`,
-      orders: result.orders,
-      transactions: result.transactions,
+      message: `Sent ${result.offers.length} purchase request(s) to farmer(s) for approval`,
+      offers: result.offers,
+      failed: result.failed,
     });
   } catch (error: any) {
-    console.error("Error placing orders from cart:", error);
+    console.error("Error sending purchase requests from cart:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 });
