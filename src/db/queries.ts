@@ -156,6 +156,16 @@ export interface NotificationRecord {
   created_at: string;
 }
 
+export interface MessageRecord {
+  id: string;
+  offer_id: string;
+  sender_id: string;
+  receiver_id: string;
+  message: string;
+  created_at: string;
+  read_at?: string | null;
+}
+
 export interface OrderRecord {
   id: string;
   listing_id: string | null;
@@ -886,6 +896,9 @@ export async function createOffer(data: {
   const listing = await getProduceListingById(data.listing_id);
   if (!listing) throw new Error('Produce listing not found');
   if (listing.status !== 'active') throw new Error('Listing is no longer active');
+  if (Number(data.quantity) > Number(listing.quantity)) {
+    throw new Error(`Only ${listing.quantity} ${listing.quantity_unit} available for this listing - requested quantity exceeds available stock.`);
+  }
 
   const id = `off_${crypto.randomUUID().slice(0, 12)}`;
   const farmerId = listing.farmer_id;
@@ -1044,6 +1057,24 @@ export async function updateOfferStatus(
     const agreedPrice = offer.offered_price;
     // Standard calculation: price per quintal (100 kg), or direct
     const totalAmount = Math.round((quantity * (agreedPrice / 100)) * 100) / 100;
+
+    // 0. Decrement available inventory on the listing so the same stock
+    // can't be sold twice across concurrent/competing offers. If the
+    // listing has since sold out or dropped below what was requested
+    // (e.g. another buyer's offer was accepted first), block this
+    // acceptance instead of silently overselling.
+    if (listing && farmerId) {
+      const remaining = Number(listing.quantity) - Number(quantity);
+      if (remaining < 0) {
+        throw new Error(
+          `Cannot accept: only ${listing.quantity} ${listing.quantity_unit} remain available, but this offer is for ${quantity} ${offer.quantity_unit}.`
+        );
+      }
+      await updateProduceListing(listing.id, farmerId, {
+        quantity: remaining,
+        status: remaining <= 0 ? 'sold' : listing.status,
+      } as any);
+    }
 
     // 1. Create Transaction (Starting at 'Accepted' stage)
     const txId = `tx_${crypto.randomUUID().slice(0, 12)}`;
@@ -1318,6 +1349,62 @@ export async function markAllNotificationsAsRead(recipientId: string) {
   await execute(
     `UPDATE notifications SET is_read = true WHERE recipient_id = ?`,
     [recipientId]
+  );
+  return true;
+}
+
+// ----------------------------------------------------
+// MESSAGES REPOSITORY (Buyer <-> Farmer Chat, scoped to a Purchase Request/Offer)
+// ----------------------------------------------------
+
+/**
+ * Fetch the full message history for a given offer, oldest first.
+ * Callers must verify the requesting user is actually a party to the
+ * offer (buyer_id or farmer_id) before calling this - it does not itself
+ * check authorization, matching the pattern used elsewhere in this file
+ * (ownership checks live at the route level, e.g. updateOfferStatus).
+ */
+export async function getMessagesForOffer(offerId: string) {
+  return await queryAll<MessageRecord>(
+    `SELECT * FROM messages WHERE offer_id = ? ORDER BY created_at ASC`,
+    [offerId]
+  );
+}
+
+/**
+ * Send a chat message tied to a specific offer/purchase request.
+ * senderId/receiverId should be derived from the offer's actual buyer_id/
+ * farmer_id by the caller - never trust client-supplied ids for these.
+ */
+export async function createMessage(data: {
+  offer_id: string;
+  sender_id: string;
+  receiver_id: string;
+  message: string;
+}) {
+  const id = `msg_${crypto.randomUUID().slice(0, 12)}`;
+  await execute(
+    `INSERT INTO messages (id, offer_id, sender_id, receiver_id, message)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, data.offer_id, data.sender_id, data.receiver_id, data.message.trim()]
+  );
+
+  await createNotification({
+    recipient_id: data.receiver_id,
+    type: 'chat_message',
+    title: 'New Message',
+    message: data.message.trim().slice(0, 120),
+    related_entity_id: data.offer_id,
+    related_entity_type: 'offer',
+  });
+
+  return await queryOne<MessageRecord>(`SELECT * FROM messages WHERE id = ?`, [id]);
+}
+
+export async function markMessagesAsRead(offerId: string, receiverId: string) {
+  await execute(
+    `UPDATE messages SET read_at = now() WHERE offer_id = ? AND receiver_id = ? AND read_at IS NULL`,
+    [offerId, receiverId]
   );
   return true;
 }
@@ -1736,102 +1823,41 @@ export async function checkoutCart(buyerId: string, itemIds?: string[]) {
     throw new Error('Cart is empty. Please add items to cart before placing order.');
   }
 
-  const createdOrders: OrderRecord[] = [];
-  const createdTransactions: TransactionRecord[] = [];
+  // Checkout no longer creates an order directly - it sends a purchase
+  // request (a Pending offer) to each farmer, who must accept it before
+  // any order/transaction is created. This reuses the existing offer
+  // accept/reject/notification pipeline instead of a parallel system.
+  const createdOffers: OfferRecord[] = [];
+  const failed: { item: any; error: string }[] = [];
 
   for (const item of itemsToOrder) {
-    // Find or fallback farmer ID
-    let farmerId = item.farmer_id;
-    if (!farmerId && item.listing_id) {
-      const listing = await getProduceListingById(item.listing_id);
-      if (listing?.farmer_id) farmerId = listing.farmer_id;
+    if (!item.listing_id) {
+      failed.push({ item, error: 'This cart item is no longer linked to an active listing.' });
+      continue;
     }
-    if (!farmerId) {
-      // Default to farmer-1 if unlinked
-      farmerId = 'farmer-1';
+    try {
+      const offer = await createOffer({
+        listing_id: item.listing_id,
+        buyer_id: buyerId,
+        offered_price: item.unit_price,
+        quantity: item.quantity,
+        quantity_unit: item.quantity_unit,
+        message: 'Sent from cart checkout',
+      });
+      createdOffers.push(offer);
+      await removeCartItem(item.id);
+    } catch (err: any) {
+      failed.push({ item, error: err.message || 'Could not create purchase request for this item.' });
     }
+  }
 
-    const orderId = `ord_${crypto.randomUUID().slice(0, 12)}`;
-    const totalAmount = item.total_amount;
-
-    // 1. Create order record
-    await execute(
-      `INSERT INTO orders (
-        id, listing_id, farmer_id, buyer_id, crop_name, quantity, quantity_unit, agreed_price, total_amount, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', now(), now())`,
-      [
-        orderId,
-        item.listing_id || null,
-        farmerId,
-        buyerId,
-        item.crop_name,
-        item.quantity,
-        item.quantity_unit,
-        item.unit_price,
-        totalAmount,
-      ]
-    );
-
-    // 2. Create logistics record
-    await createOrUpdateLogistics({
-      order_id: orderId,
-      pickup_location: item.location || 'Farm Gate, Nashik Hub',
-      delivery_location: 'Buyer Warehouse / Processing Center',
-      transporter_name: 'KisanSetu Express Logistics',
-      status: 'pending',
-    });
-
-    // 3. Create transaction record for procurement contract & escrow flow
-    const txId = `tx_${crypto.randomUUID().slice(0, 12)}`;
-    await execute(
-      `INSERT INTO transactions (
-        id, farmer_id, buyer_id, listing_id, crop_name, quantity, quantity_unit, agreed_price, total_amount, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Accepted', now(), now())`,
-      [
-        txId,
-        farmerId,
-        buyerId,
-        item.listing_id || null,
-        item.crop_name,
-        item.quantity,
-        item.quantity_unit,
-        item.unit_price,
-        totalAmount,
-      ]
-    );
-
-    // 4. Notifications
-    await createNotification({
-      recipient_id: farmerId,
-      type: 'order',
-      title: 'New Procurement Order Placed',
-      message: `Buyer has placed an order for ${item.quantity} ${item.quantity_unit} of ${item.crop_name} (Total: ₹${totalAmount.toLocaleString('en-IN')}).`,
-      related_entity_id: orderId,
-      related_entity_type: 'order',
-    });
-
-    await createNotification({
-      recipient_id: buyerId,
-      type: 'order',
-      title: 'Order Confirmed',
-      message: `Your order for ${item.quantity} ${item.quantity_unit} of ${item.crop_name} from ${item.farmer_name} has been placed successfully!`,
-      related_entity_id: orderId,
-      related_entity_type: 'order',
-    });
-
-    const fullOrder = await getOrderById(orderId);
-    if (fullOrder) createdOrders.push(fullOrder);
-
-    const fullTx = await getTransactionById(txId);
-    if (fullTx) createdTransactions.push(fullTx);
-
-    // Remove item from cart
-    await removeCartItem(item.id);
+  if (createdOffers.length === 0) {
+    throw new Error(failed[0]?.error || 'Could not create any purchase requests from this cart.');
   }
 
   return {
-    orders: createdOrders,
-    transactions: createdTransactions,
+    offers: createdOffers,
+    failed,
   };
 }
 

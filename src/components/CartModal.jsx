@@ -38,7 +38,7 @@ export default function CartModal({
     const res = await onPlaceOrder();
     if (res && res.success) {
       setCheckoutSuccess(true);
-      setCreatedOrderCount(res.orders?.length || cartItems.length);
+      setCreatedOrderCount(res.offers?.length || cartItems.length);
     }
   };
 
@@ -46,7 +46,7 @@ export default function CartModal({
     setCheckoutSuccess(false);
     onClose();
     if (onNavigate) {
-      onNavigate('orders');
+      onNavigate('offers');
     }
   };
 
@@ -85,10 +85,10 @@ export default function CartModal({
             <PackageCheck size={36} />
           </div>
           <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--neutral-900)' }}>
-            {t('cart.orderPlacedTitle', 'Procurement Order Placed!')}
+            {t('cart.orderPlacedTitle', 'Purchase Request Sent!')}
           </h3>
           <p style={{ color: 'var(--neutral-600)', marginTop: 8, maxWidth: 440, margin: '8px auto 0', fontSize: '0.92rem' }}>
-            {t('cart.orderPlacedDesc', 'Successfully recorded {count} contract order(s) in PostgreSQL. Farmer(s) have been notified for farm gate logistics scheduling.', { count: createdOrderCount })}
+            {t('cart.orderPlacedDesc', 'Sent {count} purchase request(s) to the respective farmer(s). You will be notified as soon as they respond.', { count: createdOrderCount })}
           </p>
 
           <div
@@ -108,7 +108,7 @@ export default function CartModal({
             }}
           >
             <ShieldCheck size={18} style={{ color: 'var(--primary-700)', flexShrink: 0 }} />
-            <span>Escrow & contract agreements created. No immediate payment deducted; settlement proceeds per delivery milestones.</span>
+            <span>No order is created yet - each farmer needs to accept your request first. You can track status and chat with them from My Offers.</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 24 }}>
@@ -116,7 +116,7 @@ export default function CartModal({
               {t('common.close', 'Close')}
             </button>
             <button className="btn btn-primary" onClick={handleViewOrders}>
-              {t('cart.viewPlacedOrders', 'View Placed Orders')} <ArrowRight size={16} />
+              {t('cart.viewPlacedOrders', 'View My Requests')} <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -361,10 +361,10 @@ export default function CartModal({
               disabled={isPlacingOrder || cartItems.length === 0}
             >
               {isPlacingOrder ? (
-                <>Saving to PostgreSQL...</>
+                <>Sending Request...</>
               ) : (
                 <>
-                  <PackageCheck size={18} /> {t('cart.placeOrder', 'Place Order')}
+                  <PackageCheck size={18} /> {t('cart.placeOrder', 'Send Purchase Request')}
                 </>
               )}
             </button>

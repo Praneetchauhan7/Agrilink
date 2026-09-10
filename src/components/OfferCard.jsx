@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Check, X, MessageSquare, Calendar, MapPin, Tag, History } from 'lucide-react';
+import { Check, X, MessageSquare, Calendar, MapPin, Tag, History, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import NegotiationHistoryModal from './NegotiationHistoryModal';
+import ChatWindow from './ChatWindow';
 
 export default function OfferCard({ 
   offer, 
@@ -14,6 +15,7 @@ export default function OfferCard({
 }) {
   const { t } = useLanguage();
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -91,13 +93,22 @@ export default function OfferCard({
 
       {/* History Button & Actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 10, borderTop: '1px solid var(--neutral-100)', flexWrap: 'wrap', gap: 8 }}>
-        <button 
-          className="btn btn-secondary btn-sm"
-          onClick={() => setIsHistoryModalOpen(true)}
-          style={{ gap: 4 }}
-        >
-          <History size={14} /> View Negotiation History
-        </button>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => setIsHistoryModalOpen(true)}
+            style={{ gap: 4 }}
+          >
+            <History size={14} /> View Negotiation History
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => setIsChatOpen(true)}
+            style={{ gap: 4 }}
+          >
+            <MessageCircle size={14} /> {t('chat.chatWith', 'Chat')}
+          </button>
+        </div>
 
         {/* If pending or countered, and the current user is NOT the sender of the latest proposal, show action buttons */}
         {isPendingOrCountered && !isSender && (
@@ -154,6 +165,17 @@ export default function OfferCard({
           onAccept={onAccept ? async (id) => { await onAccept(id); setIsHistoryModalOpen(false); } : undefined}
           onReject={onReject ? async (id) => { await onReject(id); setIsHistoryModalOpen(false); } : undefined}
           onCounter={onCounter}
+        />
+      )}
+
+      {/* Buyer <-> Farmer Chat, scoped to this offer/purchase request */}
+      {isChatOpen && (
+        <ChatWindow
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          offer={offer}
+          currentUserId={currentUserId}
+          role={role}
         />
       )}
     </div>
